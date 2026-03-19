@@ -39,6 +39,8 @@ from app.services.delivery_reconcile import ingest_status_callback
 from app.services.pagination import paginate
 from app.services.chart_data import counter_from_rows
 from app.services.moph_notify import health_check as moph_notify_health_check
+from app.services.alert_case_service import enrich_alert_rows, filter_rows_for_send, mark_rows_sent, claim_case
+from app.repositories.alert_cases import get_all as get_alert_cases, get_by_case_key as get_alert_case_by_key
 from app.services.flex_transform import as_flex_message_payload, detect_mode_and_build
 from app.services.flex_validator import validate_flex_message_payload, build_minimal_flex_payload
 from app.services.flex_builder_service import build_bubble, template_json_from_bubble
@@ -704,24 +706,34 @@ def notify_preview(request:Request, approved_query_id:int=Form(...), message_tem
     t = get_template_by_id(db, message_template_id)
     if not q or not t:
         raise HTTPException(status_code=404, detail='query or template not found')
-    data = preview_query(q.sql_text, max_rows=q.max_rows)
-    rows = enrich_alert_rows(db, data['rows'], str(request.base_url).rstrip('/'))
-    rows = filter_rows_for_send(rows)
-    dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows)
-    if dynamic_payload is not None:
-        payload = dynamic_payload
-    elif t.template_type == 'flex':
-        payload = build_flex_payload_from_template_rows(t.content, t.alt_text, rows)
-    else:
-        first_row = rows[0] if rows else {}
-        payload = build_message_payload(t.template_type, t.content, t.alt_text, first_row)
-    return templates.TemplateResponse('admin/notify_test.html', ctx(
-        request, db, session,
-        result=None, send_error=None, validation_errors=None,
-        template_payload=payload, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
-        approved_queries=get_queries(db), message_templates=get_templates(db),
-        media_files=get_media(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2) if isinstance(payload, list) and payload and payload[0].get("type") == "flex" else None
-    ))
+    try:
+        data = preview_query(q.sql_text, max_rows=q.max_rows)
+        rows = enrich_alert_rows(db, data['rows'], str(request.base_url).rstrip('/'))
+        rows = filter_rows_for_send(rows)
+        dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows)
+        if dynamic_payload is not None:
+            payload = dynamic_payload
+        elif t.template_type == 'flex':
+            payload = build_flex_payload_from_template_rows(t.content, t.alt_text, rows)
+        else:
+            first_row = rows[0] if rows else {}
+            payload = build_message_payload(t.template_type, t.content, t.alt_text, first_row)
+        return templates.TemplateResponse('admin/notify_test.html', ctx(
+            request, db, session,
+            result=None, send_error=None, validation_errors=None,
+            template_payload=payload, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
+            approved_queries=get_queries(db), message_templates=get_templates(db),
+            media_files=get_media(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2) if isinstance(payload, list) and payload and payload[0].get("type") == "flex" else None
+        ))
+    except Exception as exc:
+        write_log(db, session.get('username'), client_ip(request), 'notify.preview', 'failed', str(exc))
+        return templates.TemplateResponse('admin/notify_test.html', ctx(
+            request, db, session,
+            result=None, send_error=str(exc), validation_errors=None,
+            template_payload=None, data_rows=None, query_visual_rows=None,
+            approved_queries=get_queries(db), message_templates=get_templates(db),
+            media_files=get_media(db), flex_json=None
+        ))
 
 @router.post('/notify/send-from-template')
 async def notify_send_from_template(request:Request, approved_query_id:int=Form(...), message_template_id:int=Form(...), db:Session=Depends(get_db)):
@@ -731,17 +743,19 @@ async def notify_send_from_template(request:Request, approved_query_id:int=Form(
     t = get_template_by_id(db, message_template_id)
     if not q or not t:
         raise HTTPException(status_code=404, detail='query or template not found')
-    data = preview_query(q.sql_text, max_rows=q.max_rows)
-    rows = enrich_alert_rows(db, data['rows'], str(request.base_url).rstrip('/'))
-    rows = filter_rows_for_send(rows)
-    dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows)
-    if dynamic_payload is not None:
-        messages = dynamic_payload
-    elif t.template_type == 'flex':
-        messages = build_flex_payload_from_template_rows(t.content, t.alt_text, rows)
-    else:
-        messages = [build_message_payload(t.template_type, t.content, t.alt_text, row) for row in rows]
+    rows = []
+    messages = []
     try:
+        data = preview_query(q.sql_text, max_rows=q.max_rows)
+        rows = enrich_alert_rows(db, data['rows'], str(request.base_url).rstrip('/'))
+        rows = filter_rows_for_send(rows)
+        dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows)
+        if dynamic_payload is not None:
+            messages = dynamic_payload
+        elif t.template_type == 'flex':
+            messages = build_flex_payload_from_template_rows(t.content, t.alt_text, rows)
+        else:
+            messages = [build_message_payload(t.template_type, t.content, t.alt_text, row) for row in rows]
         result, _ = await send_with_log(db, session.get('username'), messages, f'approved_query_id={q.id}, template_id={t.id}')
         mark_rows_sent(db, rows)
         write_log(db, session.get('username'), client_ip(request), 'notify.send.template', 'success', f'rows={len(rows)}')
@@ -757,7 +771,7 @@ async def notify_send_from_template(request:Request, approved_query_id:int=Form(
         return templates.TemplateResponse('admin/notify_test.html', ctx(
             request, db, session,
             result=None, send_error=str(exc), validation_errors=None,
-            template_payload=messages, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
+            template_payload=messages or None, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
             approved_queries=get_queries(db), message_templates=get_templates(db),
             media_files=get_media(db), flex_json=json.dumps(messages[0]["contents"], ensure_ascii=False, indent=2) if isinstance(messages, list) and messages and messages[0].get("type") == "flex" else None
         ))
