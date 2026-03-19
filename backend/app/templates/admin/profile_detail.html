@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Provider Profile Detail</h1>
+</div>
+<div class="grid-2 mt-6">
+  <form method="post" action="/profiles/{{ profile.id }}" class="card">
+    <div class="kv"><span>Provider ID</span><strong>{{ profile.provider_id or "-" }}</strong></div>
+    <div class="mt-3"><label>Name</label><input class="input" name="name_th" value="{{ profile.name_th or '' }}"></div>
+    <div class="mt-3"><label>Position</label><input class="input" name="position_name" value="{{ profile.position_name or '' }}"></div>
+    <div class="mt-3"><label>Organization</label><input class="input" name="organization_name" value="{{ profile.organization_name or '' }}"></div>
+    <div class="mt-3"><label>Organization Code</label><input class="input" name="organization_code" value="{{ profile.organization_code or '' }}"></div>
+    <div class="mt-3"><label>License No</label><input class="input" name="license_no" value="{{ profile.license_no or '' }}"></div>
+    <div class="mt-3"><label>Phone</label><input class="input" name="phone" value="{{ profile.phone or '' }}"></div>
+    <div class="mt-3"><label>Email</label><input class="input" name="email" value="{{ profile.email or '' }}"></div>
+    <button class="btn mt-4">Update Profile</button>
+  </form>
+  <div class="card">
+    <div class="muted">Raw JSON</div>
+    <div class="json-box mt-3"><pre>{{ pretty_json(profile.raw_json) }}</pre></div>
+  </div>
+</div>
+<div class="card mt-6">
+  <div class="muted">Update History</div>
+  {% for h in history_rows %}
+    <div class="item">
+      <strong>{{ h.action }}</strong> by {{ h.changed_by or "-" }}
+      <div class="json-box mt-3"><pre>{{ pretty_json(h.diff_json) }}</pre></div>
+    </div>
+  {% else %}<div class="muted">No history</div>{% endfor %}
+</div>
+{% endblock %}

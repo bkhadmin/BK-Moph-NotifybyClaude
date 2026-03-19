@@ -1,0 +1,27 @@
+[
+  {
+    "clinic_name": "ตรวจโรคทั่วไป",
+    "department": "061-จุดซักประวัติตรวจโรคทั่วไป",
+    "total_appointment": 66
+  },
+  {
+    "clinic_name": "โรคความดันโลหิตสูง",
+    "department": "062-จุดซักประวัติโรคไม่ติดต่อเรื้อรัง",
+    "total_appointment": 60
+  },
+  {
+    "clinic_name": "กายภาพบำบัด",
+    "department": "027-กายภาพบำบัด",
+    "total_appointment": 36
+  },
+  {
+    "clinic_name": "โรคเบาหวาน",
+    "department": "062-จุดซักประวัติโรคไม่ติดต่อเรื้อรัง",
+    "total_appointment": 33
+  },
+  {
+    "clinic_name": "สุขภาพจิตและจิตเวช",
+    "department": "020-จุดซักประวัติคลินิกจิตเวช",
+    "total_appointment": 17
+  }
+]

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Dynamic Flex Builder</h1>
+  <div class="muted">Module 36: query fields → flex message พร้อม repeater หลายแถว</div>
+</div>
+
+{% if form_error %}
+<div class="alert error mt-4">{{ form_error }}</div>
+{% endif %}
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/templates/dynamic-flex-builder" class="card">
+    <h3>Build Dynamic Flex Template</h3>
+
+    <div class="mt-3">
+      <label>Template Name</label>
+      <input class="input" name="template_name" value="{{ form_values.template_name if form_values else '' }}">
+    </div>
+
+    <div class="mt-3">
+      <label>Approved Query ID</label>
+      <input class="input" name="approved_query_id" value="{{ form_values.approved_query_id if form_values else '' }}" placeholder="ใส่ Approved Query ID เพื่อ preview">
+    </div>
+
+    <div class="mt-3">
+      <label>Alt Text</label>
+      <input class="input" name="alt_text" value="{{ form_values.alt_text if form_values else 'BK-Moph Notify Flex Message' }}">
+    </div>
+
+    <div class="mt-3">
+      <label>Dynamic Flex JSON</label>
+      <textarea class="input" style="min-height: 420px; font-family: monospace" name="flex_json">{{ form_values.flex_json if form_values else '{
+  "type": "bubble",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      { "type": "text", "text": "ผลตรวจ LAB", "weight": "bold", "size": "lg", "wrap": true },
+      { "type": "text", "text": "ผู้ป่วย {patient_name}", "margin": "md", "wrap": true },
+      { "type": "text", "text": "HN {hn}", "size": "sm", "color": "#64748b", "wrap": true },
+      { "type": "separator", "margin": "md" },
+      {
+        "_repeat": "rows",
+        "template": {
+          "type": "box",
+          "layout": "vertical",
+          "margin": "md",
+          "contents": [
+            { "type": "text", "text": "{lab_name}", "weight": "bold", "size": "sm", "wrap": true },
+            { "type": "text", "text": "ผล {lab_result} ({lab_flag})", "size": "sm", "wrap": true },
+            { "type": "text", "text": "วันที่รายงาน {report_date}", "size": "xs", "color": "#64748b", "wrap": true }
+          ]
+        }
+      }
+    ]
+  }
+}' }}</textarea>
+      <div class="muted mt-2">ใช้ placeholder แบบ {field_name} และ repeater แบบ "_repeat": "rows"</div>
+    </div>
+
+    <div class="mt-3">
+      <label><input type="checkbox" name="save_as_template" value="1" {% if form_values and form_values.save_as_template == '1' %}checked{% endif %}> Save as template</label>
+    </div>
+
+    <div class="page-actions mt-4">
+      <button class="btn" type="submit">Preview / Save</button>
+      <a class="btn secondary" href="/templates">Back to Templates</a>
+    </div>
+  </form>
+
+  <div class="card">
+    <h3>Available Query Fields</h3>
+    <div class="muted mt-2">fields จาก query preview</div>
+    <div class="mt-4">
+      {% if fields %}
+        {% for f in fields %}
+          <span class="badge">{{ '{' ~ f ~ '}' }}</span>
+        {% endfor %}
+      {% else %}
+        <div class="muted">ยังไม่มี fields — ใส่ Approved Query ID แล้วกด Preview</div>
+      {% endif %}
+    </div>
+
+    <h3 class="mt-6">Tips</h3>
+    <div class="muted mt-2">
+      <div>- ใช้ <code>{field_name}</code> แทนค่าจาก query</div>
+      <div>- ใช้ repeater เพื่อวนทุกแถวของ query</div>
+      <div>- เหมาะกับ LAB, รายการยา, vital sign, รายงานหลายรายการ</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-6">
+  <h3>Preview Payload</h3>
+  <textarea class="input mt-3" style="min-height: 360px; font-family: monospace">{{ preview_json }}</textarea>
+</div>
+{% endblock %}

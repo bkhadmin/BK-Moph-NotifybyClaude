@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">System Connections</h1>
+</div>
+<div class="grid-3 mt-6">
+  <div class="card">
+    <h3>HOSxP Database</h3>
+    <pre>{{ hosxp_result }}</pre>
+  </div>
+  <div class="card">
+    <h3>Provider / Health ID Config</h3>
+    <pre>{{ provider_result }}</pre>
+  </div>
+  <div class="card">
+    <h3>MOPH Notify Config</h3>
+    <pre>{{ notify_result }}</pre>
+  </div>
+</div>
+{% endblock %}

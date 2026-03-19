@@ -1,0 +1,34 @@
+{
+  "type": "carousel",
+  "contents": [
+    {
+      "type": "bubble",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+          { "type": "text", "text": "สรุปผู้ป่วยนัดหมาย", "weight": "bold", "size": "lg", "wrap": true },
+          { "type": "text", "text": "{sent_at}", "size": "xs", "color": "#64748b", "margin": "sm" }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+          { "type": "text", "text": "คลินิก: {clinic_name}", "weight": "bold", "wrap": true },
+          { "type": "text", "text": "แผนกที่นัด: {department}", "size": "sm", "color": "#475569", "wrap": true, "margin": "md" },
+          { "type": "separator", "margin": "md" },
+          { "type": "text", "text": "จำนวนผู้ป่วยที่นัด", "size": "sm", "color": "#64748b", "margin": "md" },
+          { "type": "text", "text": "{total_appointment} ราย", "weight": "bold", "size": "xxl", "margin": "sm" }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "contents": [
+          { "type": "text", "text": "BK-Moph Notify", "size": "xs", "color": "#94a3b8", "align": "center" }
+        ]
+      }
+    }
+  ]
+}

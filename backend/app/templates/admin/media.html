@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="p-6">
+  <h1 class="text-2xl font-bold">Media Library</h1>
+  <form method="post" action="/media" enctype="multipart/form-data" class="card mt-6">
+    <input type="file" name="image" class="input">
+    <button class="btn mt-4">Upload & Resize</button>
+  </form>
+  <div class="card mt-6">
+    {% for m in media_files %}
+      <div class="item"><a href="{{ m.public_url }}" target="_blank">{{ m.original_name }}</a> | {{ m.width }}x{{ m.height }}</div>
+    {% else %}<div class="muted">No media</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

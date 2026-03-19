@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Schedules</h1>
+  <div class="muted">Module 31: scheduler fix, daily timing, edit/delete</div>
+</div>
+
+{% if form_error %}
+<div class="alert error mt-4">{{ form_error }}</div>
+{% endif %}
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/schedules" class="card">
+    <h3>{% if form_values and form_values.id %}แก้ไข Schedule{% else %}สร้าง Schedule{% endif %}</h3>
+    <input type="hidden" name="schedule_id" value="{{ form_values.id if form_values else '' }}">
+
+    <div class="mt-3">
+      <label>Name</label>
+      <input class="input" name="name" value="{{ form_values.name if form_values else '' }}" required>
+    </div>
+
+    <div class="mt-3">
+      <label>Schedule Type</label>
+      {% set st = form_values.schedule_type if form_values else 'once' %}
+      <select class="input" name="schedule_type" id="schedule-type" onchange="toggleScheduleFields()">
+        <option value="once" {% if st == 'once' %}selected{% endif %}>ครั้งเดียว</option>
+        <option value="daily" {% if st == 'daily' %}selected{% endif %}>ทุกวันเวลาเดิม</option>
+        <option value="interval" {% if st == 'interval' %}selected{% endif %}>ทุก X นาที</option>
+        <option value="cron" {% if st == 'cron' %}selected{% endif %}>Cron</option>
+      </select>
+    </div>
+
+    <div class="mt-3" id="field-once">
+      <label>วันเวลาแบบครั้งเดียว</label>
+      <input class="input" name="cron_value" id="shared-cron-value" placeholder="2026-03-17 17:00" value="{{ form_values.cron_value if form_values and (form_values.schedule_type == 'once' or not form_values.schedule_type) else '' }}">
+      <div class="muted mt-2">ตัวอย่าง: 2026-03-17 17:00 หรือ 2026-03-17T17:00:00</div>
+    </div>
+
+    <div class="mt-3" id="field-daily" style="display:none">
+      <label>เวลารายวัน</label>
+      <input class="input" id="daily-time-input" placeholder="17:00 หรือ 17.00" value="{{ form_values.cron_value if form_values and form_values.schedule_type == 'daily' else '' }}">
+      <div class="muted mt-2">ใช้เวลาอย่างเดียว เช่น 06:00 หรือ 17.00</div>
+    </div>
+
+    <div class="mt-3" id="field-interval" style="display:none">
+      <label>ทุกกี่นาที</label>
+      <input class="input" type="number" min="1" name="interval_minutes" value="{{ form_values.interval_minutes if form_values else '' }}">
+    </div>
+
+    <div class="mt-3" id="field-cron" style="display:none">
+      <label>Cron Expression</label>
+      <input class="input" id="cron-expression-input" placeholder="0 6 * * *" value="{{ form_values.cron_value if form_values and form_values.schedule_type == 'cron' else '' }}">
+      <div class="muted mt-2">ตัวอย่าง: 0 6 * * * = ทุกวัน 06:00</div>
+    </div>
+
+    <div class="mt-3">
+      <label>Approved Query</label>
+      <select class="input" name="approved_query_id">
+        <option value="">-- none --</option>
+        {% for q in approved_queries %}
+        <option value="{{ q.id }}" {% if form_values and form_values.approved_query_id|string == q.id|string %}selected{% endif %}>{{ q.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mt-3">
+      <label>Message Template</label>
+      <select class="input" name="message_template_id">
+        <option value="">-- none --</option>
+        {% for t in message_templates %}
+        <option value="{{ t.id }}" {% if form_values and form_values.message_template_id|string == t.id|string %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid-2 mt-3">
+      <div>
+        <label>Status</label>
+        <select class="input" name="is_active">
+          <option value="Y" {% if not form_values or form_values.is_active == 'Y' %}selected{% endif %}>Active</option>
+          <option value="N" {% if form_values and form_values.is_active == 'N' %}selected{% endif %}>Inactive</option>
+        </select>
+      </div>
+      <div>
+        <label>Retry Limit</label>
+        <input class="input" type="number" min="0" name="retry_limit" value="{{ form_values.retry_limit if form_values else '3' }}">
+      </div>
+    </div>
+
+    <div class="page-actions mt-4">
+      <button class="btn" type="submit" onclick="prepareScheduleSubmit()">{% if form_values and form_values.id %}Update Schedule{% else %}Save Schedule{% endif %}</button>
+      {% if form_values and form_values.id %}
+      <a href="/schedules" class="btn secondary">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
+
+  <div class="card">
+    <h3>คู่มือการตั้งเวลา</h3>
+    <div class="item"><strong>ครั้งเดียว</strong><div class="muted">ใส่วันเวลาเต็ม เช่น 2026-03-17 17:00</div></div>
+    <div class="item"><strong>ทุกวันเวลาเดิม</strong><div class="muted">ใส่เวลาอย่างเดียว เช่น 06:00 หรือ 17.00</div></div>
+    <div class="item"><strong>ทุก X นาที</strong><div class="muted">กรอกตัวเลขนาที เช่น 30</div></div>
+    <div class="item"><strong>Cron</strong><div class="muted">เช่น 0 6 * * * = ทุกวัน 06:00</div></div>
+  </div>
+</div>
+
+<div class="card mt-6">
+  <h3>Schedule List</h3>
+  <table class="table mt-4">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Value</th>
+        <th>Next Run</th>
+        <th>Last Run</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td>{{ j.name }}</td>
+        <td>{{ j.schedule_type }}</td>
+        <td>{{ j.cron_value or j.interval_minutes or '-' }}</td>
+        <td>{{ j.next_run_at or '-' }}</td>
+        <td>{{ j.last_run_at or '-' }}</td>
+        <td>{{ j.is_active }}</td>
+        <td>
+          <div class="page-actions">
+            <a href="/schedules?edit_id={{ j.id }}" class="btn secondary">Edit</a>
+            <form method="post" action="/schedules/{{ j.id }}/delete" onsubmit="return confirm('Delete this schedule?')">
+              <button class="btn danger">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">No schedules</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggleScheduleFields(){
+  const type = document.getElementById('schedule-type').value
+  document.getElementById('field-once').style.display = (type === 'once') ? '' : 'none'
+  document.getElementById('field-daily').style.display = (type === 'daily') ? '' : 'none'
+  document.getElementById('field-interval').style.display = (type === 'interval') ? '' : 'none'
+  document.getElementById('field-cron').style.display = (type === 'cron') ? '' : 'none'
+}
+function prepareScheduleSubmit(){
+  const type = document.getElementById('schedule-type').value
+  const shared = document.getElementById('shared-cron-value')
+  const dailyField = document.getElementById('daily-time-input')
+  const cronField = document.getElementById('cron-expression-input')
+  const intervalField = document.querySelector('input[name="interval_minutes"]')
+
+  if(type === 'daily'){
+    shared.value = dailyField.value
+    intervalField.value = ''
+  }else if(type === 'cron'){
+    shared.value = cronField.value
+    intervalField.value = ''
+  }else if(type === 'interval'){
+    shared.value = ''
+  }else{
+    intervalField.value = ''
+  }
+}
+toggleScheduleFields()
+</script>
+{% endblock %}

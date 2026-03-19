@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BK-Moph Notify</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="bg-slate-100 text-slate-800">
+{% if session %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">BK-Moph Notify</div>
+    <nav class="sidebar-nav">
+      {% if menus.dashboard %}<a href="/dashboard">Dashboard</a>{% endif %}
+      {% if menus.logs %}<a href="/reports">Reports</a>{% endif %}
+      {% if menus.users %}<a href="/users">Users</a>{% endif %}
+      <a href="/profiles">Provider Profiles</a>
+      {% if menus.queries %}<a href="/queries">Approved Queries</a>{% endif %}
+      {% if menus.templates %}<a href="/templates">Templates</a>{% endif %}
+      {% if menus.media %}<a href="/media">Media Library</a>{% endif %}
+      {% if menus.notify %}<a href="/notify/test">MOPH Notify</a>{% endif %}
+      {% if menus.schedules %}<a href="/schedules">Schedules</a>{% endif %}
+      {% if menus.logs %}<a href="/logs/access">Logs</a>{% endif %}
+      {% if menus.logs %}<a href="/system/connections">Connections</a>{% endif %}
+      {% if menus.rbac %}<a href="/rbac">RBAC</a>{% endif %}
+      <a href="/logout">Logout</a>
+    </nav>
+  </aside>
+  <main class="content">
+    <div class="container">
+      {% block body %}{% endblock %}
+    </div>
+  </main>
+</div>
+{% else %}
+  {% block guest_body %}{% endblock %}
+{% endif %}
+</body>
+</html>

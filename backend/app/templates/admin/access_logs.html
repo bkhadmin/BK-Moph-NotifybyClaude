@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="p-6">
+  <h1 class="text-2xl font-bold">Logs & Reports</h1>
+  <form method="get" action="/logs/access" class="card mt-6">
+    <input name="q" class="input" value="{{ keyword or '' }}" placeholder="ค้นหา actor / status / detail">
+    <div class="mt-4 flex gap-4">
+      <button class="btn">Filter</button>
+      <a href="/logs/export/access?q={{ keyword or '' }}">Export Access CSV</a>
+      <a href="/logs/export/access?format=xlsx&q={{ keyword or '' }}">Export Access XLSX</a>
+      <a href="/logs/export/send?q={{ keyword or '' }}">Export Send CSV</a>
+      <a href="/logs/export/send?format=xlsx&q={{ keyword or '' }}">Export Send XLSX</a>
+      <a href="/logs/export/delivery?q={{ keyword or '' }}">Export Delivery CSV</a>
+      <a href="/logs/export/delivery?format=xlsx&q={{ keyword or '' }}">Export Delivery XLSX</a>
+    </div>
+  </form>
+  <div class="card mt-6">
+    <h3>Access Logs</h3>
+    {% for x in logs %}
+      <div class="item">{{ x.actor or "-" }} | {{ x.ip_address or "-" }} | {{ x.action }} | {{ x.status }} | {{ x.detail or "-" }}</div>
+    {% else %}<div class="muted">No logs</div>{% endfor %}
+  </div>
+  <div class="card mt-6">
+    <h3>Send Logs</h3>
+    {% for x in send_logs %}
+      <div class="item">#{{ x.id }} | {{ x.actor or "-" }} | {{ x.channel }} | {{ x.status }} | retry={{ x.retry_count }} | {{ x.detail or "-" }}</div>
+    {% else %}<div class="muted">No send logs</div>{% endfor %}
+  </div>
+  <div class="card mt-6">
+    <h3>Delivery Status</h3>
+    {% for x in delivery_statuses %}
+      <div class="item">send_log_id={{ x.send_log_id }} | {{ x.status }} | {{ x.provider_status or "-" }} | {{ x.detail or "-" }}</div>
+    {% else %}<div class="muted">No delivery status</div>{% endfor %}
+  </div>
+  <div class="card mt-6">
+    <div>Page {{ pager.page }} / {{ pager.pages }} | Total {{ pager.total }}</div>
+  </div>
+</div>
+{% endblock %}

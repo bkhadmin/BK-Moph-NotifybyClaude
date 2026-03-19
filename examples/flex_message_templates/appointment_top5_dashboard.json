@@ -1,0 +1,71 @@
+{
+  "type": "bubble",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      { "type": "text", "text": "Top 5 นัดหมายวันนี้", "weight": "bold", "size": "lg" },
+      { "type": "text", "text": "ส่งเมื่อ {sent_at}", "size": "xs", "color": "#64748b", "margin": "sm" }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "baseline",
+        "contents": [
+          { "type": "text", "text": "1", "flex": 1, "size": "sm", "color": "#64748b" },
+          { "type": "text", "text": "{row1_clinic_name}", "flex": 6, "size": "sm", "wrap": true },
+          { "type": "text", "text": "{row1_total_appointment}", "flex": 2, "size": "sm", "align": "end", "weight": "bold" }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "baseline",
+        "contents": [
+          { "type": "text", "text": "2", "flex": 1, "size": "sm", "color": "#64748b" },
+          { "type": "text", "text": "{row2_clinic_name}", "flex": 6, "size": "sm", "wrap": true },
+          { "type": "text", "text": "{row2_total_appointment}", "flex": 2, "size": "sm", "align": "end", "weight": "bold" }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "baseline",
+        "contents": [
+          { "type": "text", "text": "3", "flex": 1, "size": "sm", "color": "#64748b" },
+          { "type": "text", "text": "{row3_clinic_name}", "flex": 6, "size": "sm", "wrap": true },
+          { "type": "text", "text": "{row3_total_appointment}", "flex": 2, "size": "sm", "align": "end", "weight": "bold" }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "baseline",
+        "contents": [
+          { "type": "text", "text": "4", "flex": 1, "size": "sm", "color": "#64748b" },
+          { "type": "text", "text": "{row4_clinic_name}", "flex": 6, "size": "sm", "wrap": true },
+          { "type": "text", "text": "{row4_total_appointment}", "flex": 2, "size": "sm", "align": "end", "weight": "bold" }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "baseline",
+        "contents": [
+          { "type": "text", "text": "5", "flex": 1, "size": "sm", "color": "#64748b" },
+          { "type": "text", "text": "{row5_clinic_name}", "flex": 6, "size": "sm", "wrap": true },
+          { "type": "text", "text": "{row5_total_appointment}", "flex": 2, "size": "sm", "align": "end", "weight": "bold" }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      { "type": "separator" },
+      { "type": "text", "text": "ข้อมูลจาก HOSxP", "size": "xs", "color": "#94a3b8", "margin": "md", "align": "center" }
+    ]
+  }
+}

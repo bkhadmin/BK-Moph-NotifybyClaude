@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Users</h1>
+</div>
+
+<div class="card mt-6">
+<input id="user-search" class="input" placeholder="Search user..." onkeyup="filterTable('user-search','user-table')">
+
+<table id="user-table" class="table mt-4">
+<thead>
+<tr><th>Name</th><th>Username</th><th>Auth</th><th>Role</th></tr>
+</thead>
+<tbody>
+{% for u in users %}
+<tr>
+<td>{{u.display_name}}</td>
+<td>{{u.username}}</td>
+<td>{{u.auth_type}}</td>
+<td>{{u.role_id}}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<script src="/static/js/table.js"></script>
+{% endblock %}

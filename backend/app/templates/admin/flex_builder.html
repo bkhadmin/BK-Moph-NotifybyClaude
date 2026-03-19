@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Flex Message Builder</h1>
+</div>
+
+{% if flex_error %}
+<div class="alert error mt-4">{{ flex_error }}</div>
+{% endif %}
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/flex-builder" class="card">
+    <h3>Builder</h3>
+    <div class="mt-3"><label>Title</label><input class="input" name="title" value="หัวข้อ"></div>
+    <div class="mt-3"><label>Subtitle</label><input class="input" name="subtitle" value=""></div>
+    <div class="mt-3"><label>Body Text</label><textarea class="textarea" name="body_text" rows="8">รายละเอียดข้อความ รองรับตัวแปรเช่น {name}</textarea></div>
+    <div class="mt-3"><label>Hero Image URL</label><input class="input" name="hero_image_url" value=""></div>
+    <div class="mt-3"><label>Button Label</label><input class="input" name="button_label" value=""></div>
+    <div class="mt-3"><label>Button URL</label><input class="input" name="button_url" value=""></div>
+    <button class="btn mt-4">Generate Flex JSON</button>
+  </form>
+
+  <div class="card">
+    <h3>Generated JSON</h3>
+    <pre>{{ flex_json }}</pre>
+  </div>
+</div>
+{% endblock %}

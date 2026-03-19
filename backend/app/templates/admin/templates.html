@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Templates</h1><div class="page-actions mt-3"><a class="btn" href="/templates/dynamic-flex-builder">Dynamic Flex Builder</a></div>
+  <div class="page-actions">
+    <a href="/templates/export" class="btn secondary">Export JSON</a>
+  </div>
+</div>
+
+<div class="grid-2 mt-6">
+  <form method="post" action="{% if edit_row %}/templates/{{ edit_row.id }}/update{% else %}/templates{% endif %}" class="card">
+    <h3>{% if edit_row %}แก้ไข Template{% else %}สร้าง Template{% endif %}</h3>
+    <div class="mt-3"><label>Name</label><input class="input" name="name" value="{{ edit_row.name if edit_row else '' }}"></div>
+    <div class="mt-3">
+      <label>Type</label>
+      <select class="input" name="template_type">
+        {% for tp in ['text','image','flex','flex_full_list','flex_top5','flex_carousel','flex_dynamic'] %}
+        <option value="{{ tp }}" {% if edit_row and edit_row.template_type == tp %}selected{% endif %}>{{ tp }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mt-3"><label>Alt Text</label><input class="input" name="alt_text" value="{{ edit_row.alt_text if edit_row else '' }}"></div>
+    <div class="mt-3"><label>Content</label><textarea id="template-content" class="textarea" name="content" rows="16">{{ edit_row.content if edit_row else flex_sample }}</textarea></div>
+    <div class="page-actions mt-4">
+      <button class="btn">{% if edit_row %}Update{% else %}Save{% endif %}</button>
+      {% if edit_row %}<a href="/templates" class="btn secondary">Cancel</a>{% endif %}
+    </div>
+  </form>
+
+  <div class="card">
+    <h3>Import Templates</h3>
+    <form method="post" action="/templates/import">
+      <div class="mt-3"><label>Import JSON</label><textarea class="textarea" name="import_payload" rows="12">[
+  {
+    "name": "Imported Flex",
+    "template_type": "flex",
+    "content": "{\"type\":\"bubble\",\"body\":{\"type\":\"box\",\"layout\":\"vertical\",\"contents\":[{\"type\":\"text\",\"text\":\"สวัสดี\",\"weight\":\"bold\"}]}}",
+    "alt_text": "Imported Flex"
+  }
+]</textarea></div>
+      <button class="btn mt-4">Import</button>
+    </form>
+
+    <div class="section-title mt-6">Media Picker</div>
+    <div class="media-grid">
+      {% for m in media_files %}
+        <button type="button" class="media-pick-btn" onclick="insertMediaUrl('{{ m.public_url }}')">
+          <div class="media-name">{{ m.original_name }}</div>
+          <div class="muted">{{ m.width }}x{{ m.height }}</div>
+          <div class="media-url">{{ m.public_url }}</div>
+        </button>
+      {% else %}
+        <div class="muted">No media</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if render_result %}
+<div class="card mt-6">
+  <div class="muted">Render Result</div>
+  <div class="json-box mt-3"><pre>{{ pretty_json(render_result) }}</pre></div>
+</div>
+{% endif %}
+
+<div class="card mt-6">
+  <h3>Template List</h3>
+  {% for t in message_templates %}
+  <div class="item">
+    <div class="item-row">
+      <div>
+        <strong>{{ t.name }}</strong>
+        <div class="muted">type={{ t.template_type }} | alt={{ t.alt_text or '-' }}</div>
+      </div>
+      <div class="page-actions">
+        <a href="/templates?edit_id={{ t.id }}" class="btn secondary">Edit</a>
+        <form method="post" action="/templates/{{ t.id }}/clone">
+          <button class="btn secondary">Clone</button>
+        </form>
+        <form method="post" action="/templates/{{ t.id }}/delete" onsubmit="return confirm('Delete this template?')">
+          <button class="btn danger">Delete</button>
+        </form>
+      </div>
+    </div>
+    <details class="json-box mt-3">
+      <summary>Content</summary>
+      <pre>{{ t.content }}</pre>
+    </details>
+  </div>
+  {% else %}
+  <div class="muted">No templates</div>
+  {% endfor %}
+</div>
+
+<script>
+function insertMediaUrl(url){
+  const ta = document.getElementById('template-content');
+  const start = ta.selectionStart || 0;
+  const end = ta.selectionEnd || 0;
+  const val = ta.value || '';
+  ta.value = val.slice(0, start) + url + val.slice(end);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = start + url.length;
+}
+</script>
+{% endblock %}

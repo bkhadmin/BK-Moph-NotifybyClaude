@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>รับเคส LAB วิกฤต</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;color:#0f172a}
+    .card{max-width:720px;margin:0 auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
+    .muted{color:#64748b}.row{margin-top:10px}.btn{background:#2563eb;color:#fff;border:0;border-radius:10px;padding:12px 18px;cursor:pointer}
+    .input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px}
+    .ok{background:#ecfdf5;color:#166534;padding:12px;border-radius:10px}.err{background:#fef2f2;color:#991b1b;padding:12px;border-radius:10px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>รับเคส LAB วิกฤต</h1>
+    <div class="muted">เมื่อกดรับเคส ระบบจะบันทึกชื่อผู้รับและเวลารับเคส และจะไม่ส่งแจ้งเตือนเคสนี้ซ้ำอีก</div>
+
+    <div class="row"><strong>ผู้ป่วย:</strong> {{ case.patient_name }}</div>
+    <div class="row"><strong>HN:</strong> {{ case.patient_hn }}</div>
+    <div class="row"><strong>รายการ:</strong> {{ case.item_name }} = {{ case.item_value }}</div>
+    <div class="row"><strong>แผนก:</strong> {{ case.department or '-' }}</div>
+    <div class="row"><strong>วันที่/เวลา:</strong> {{ case.report_date_text or '-' }} {{ case.report_time_text or '' }}</div>
+    <div class="row"><strong>สถานะ:</strong> {{ case.status }}</div>
+
+    {% if error %}
+      <div class="err row">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+      <div class="ok row">รับเคสเรียบร้อยแล้ว โดย {{ case.claimed_by }} เมื่อ {{ case.claimed_at }}</div>
+    {% endif %}
+
+    {% if case.status != 'CLAIMED' %}
+    <form method="post" action="/alerts/claim" class="row">
+      <input type="hidden" name="case_key" value="{{ case.case_key }}">
+      <label>ชื่อผู้รับเคส</label>
+      <input class="input" name="receiver_name" placeholder="กรอกชื่อผู้รับเคส">
+      <div class="row"><button class="btn" type="submit">ยืนยันรับเคส</button></div>
+    </form>
+    {% endif %}
+  </div>
+</body>
+</html>

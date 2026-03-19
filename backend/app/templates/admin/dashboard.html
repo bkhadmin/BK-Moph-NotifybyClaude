@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="admin-shell">
+  <div class="admin-top">
+    <div>
+      <div class="admin-label">Overview</div>
+      <h1 class="admin-title">Dashboard</h1>
+    </div>
+    <div class="admin-badge">BK-Moph Notify Control Center</div>
+  </div>
+
+  <div class="stat-grid mt-6">
+    <div class="stat-card">
+      <div class="stat-label">Users</div>
+      <div class="stat-value">{{ users|length }}</div>
+      <div class="stat-link"><a href="/users">Manage users</a></div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-label">Access Logs</div>
+      <div class="stat-value">{{ logs|length }}</div>
+      <div class="stat-link"><a href="/logs/access">View logs</a></div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-label">Send Logs</div>
+      <div class="stat-value">{{ send_logs|length }}</div>
+      <div class="stat-link"><a href="/reports">Delivery reports</a></div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-label">Schedules</div>
+      <div class="stat-value">{{ jobs|length }}</div>
+      <div class="stat-link"><a href="/schedules">Manage schedules</a></div>
+    </div>
+  </div>
+
+  <div class="grid-2 mt-6">
+    <div class="card">
+      <div class="section-title">System Snapshot</div>
+      <div class="kv"><span>Media Files</span><strong>{{ media_files|length }}</strong></div>
+      <div class="kv"><span>Delivery Status</span><strong>{{ delivery_statuses|length }}</strong></div>
+      <div class="kv"><span>Provider Profiles</span><strong>{{ provider_profiles|length }}</strong></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Quick Actions</div>
+      <div class="quick-grid">
+        <a class="quick-btn" href="/notify/test">Send Notify</a>
+        <a class="quick-btn" href="/queries">Approved Queries</a>
+        <a class="quick-btn" href="/templates">Templates</a>
+        <a class="quick-btn" href="/media">Media Library</a>
+        <a class="quick-btn" href="/scheduler-monitor">Scheduler Monitor</a>
+        <a class="quick-btn" href="/alerts/cases">Alert Cases</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

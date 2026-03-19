@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Alert Cases</h1>
+  <div class="muted">เคสจาก LAB วิกฤต/การแจ้งเตือนที่ถูกสร้างและสถานะการรับเคส</div>
+</div>
+
+<div class="card mt-6">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>HN</th>
+        <th>Patient</th>
+        <th>Item</th>
+        <th>Value</th>
+        <th>Department</th>
+        <th>Reported</th>
+        <th>Claimed By</th>
+        <th>Claimed At</th>
+        <th>Sent</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in alert_cases %}
+      <tr>
+        <td>{{ c.status }}</td>
+        <td>{{ c.patient_hn or '-' }}</td>
+        <td>{{ c.patient_name or '-' }}</td>
+        <td>{{ c.item_name or '-' }}</td>
+        <td>{{ c.item_value or '-' }}</td>
+        <td>{{ c.department or '-' }}</td>
+        <td>{{ c.report_date_text or '-' }} {{ c.report_time_text or '' }}</td>
+        <td>{{ c.claimed_by or '-' }}</td>
+        <td>{{ c.claimed_at or '-' }}</td>
+        <td>{{ c.sent_count or 0 }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="muted">No cases</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

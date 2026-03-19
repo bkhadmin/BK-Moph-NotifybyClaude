@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">MOPH Notify Test</h1>
+  <div class="muted">Module 20: restore preview/send template routes + media reference + AdminLTE style dashboard</div>
+</div>
+
+{% if send_error %}
+<div class="alert error mt-4">{{ send_error }}</div>
+{% endif %}
+
+{% if validation_errors is defined and validation_errors is not none %}
+<div class="card mt-4">
+  <div class="muted">Flex Validation Result</div>
+  {% if validation_errors %}
+    <div class="alert error mt-3">
+      {% for err in validation_errors %}
+      <div>{{ err }}</div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="success-box mt-3">Flex payload valid</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/notify/test" class="card">
+    <h3>ส่งข้อความแบบข้อความธรรมดา</h3>
+    <div class="mt-3">
+      <label>Message Text</label>
+      <textarea name="message_text" class="textarea" rows="6">ทดสอบส่งข้อความจาก BK-Moph Notify</textarea>
+    </div>
+    <button class="btn mt-4">Send Text</button>
+  </form>
+
+  <form method="post" action="/notify/flex-builder" class="card">
+    <h3>Flex Builder</h3>
+    <div class="mt-3">
+      <label>Preset Mode</label>
+      <select class="input" name="preset_mode">
+        <option value="single">Single Bubble</option>
+        <option value="summary">Summary Bubble</option>
+        <option value="top5">Top 5 Dashboard</option><option value="full_list">Full List Dashboard</option><option value="full_list">Full List Dashboard</option>
+        <option value="carousel">Carousel Item</option>
+      </select>
+    </div>
+    <div class="mt-3"><label>Title</label><input class="input" name="title" value="สรุปผู้ป่วยนัดหมาย"></div>
+    <div class="mt-3"><label>Subtitle</label><input class="input" name="subtitle" value="ส่งเมื่อ {sent_at}"></div>
+    <div class="mt-3"><label>Body Text</label><textarea class="textarea" name="body_text" rows="6">คลินิก {clinic_name}
+แผนกที่นัด {department}
+จำนวนผู้ป่วยที่นัด {total_appointment} ราย</textarea></div>
+    <div class="mt-3"><label>Hero Image URL</label><input class="input" name="hero_image_url" value=""></div>
+    <div class="grid-2 mt-3">
+      <div><label>Button Label</label><input class="input" name="button_label" value=""></div>
+      <div><label>Button URL</label><input class="input" name="button_url" value=""></div>
+    </div>
+    <div class="grid-2 mt-3">
+      <div><label>Title Color</label><input class="input" type="color" name="title_color" value="#0f172a"></div>
+      <div><label>Subtitle Color</label><input class="input" type="color" name="subtitle_color" value="#64748b"></div>
+    </div>
+    <div class="grid-2 mt-3">
+      <div><label>Body Color</label><input class="input" type="color" name="body_color" value="#334155"></div>
+      <div><label>Accent Color</label><input class="input" type="color" name="accent_color" value="#2563eb"></div>
+    </div>
+    <div class="grid-2 mt-3">
+      <div>
+        <label>Title Size</label>
+        <select class="input" name="title_size">
+          <option>sm</option><option selected>lg</option><option>xl</option><option>xxl</option><option>3xl</option><option>4xl</option>
+        </select>
+      </div>
+      <div>
+        <label>Body Size</label>
+        <select class="input" name="body_size">
+          <option>sm</option><option selected>md</option><option>lg</option><option>xl</option>
+        </select>
+      </div>
+    </div>
+    <div class="card-lite mt-4"><div class="muted mb-2">ถ้าเลือก Full List Dashboard แล้ว Save as template ระบบจะบันทึกเป็น Dynamic Full List Template และนำไปใช้ซ้ำใน Preview/Send From Template + Query ได้รูปแบบเดียวกัน โดย preview ใน builder จะเป็นตัวอย่าง placeholder แต่ตอน Preview From Template + Query จะเป็น full list จริง</div>
+      <label><input type="checkbox" name="save_as_template" value="1"> Save as template</label>
+      <div class="mt-3"><label>Template Name</label><input class="input" name="template_name" value=""></div>
+    </div>
+    <button class="btn mt-4">Generate Flex JSON</button>
+  </form>
+</div>
+
+<div class="grid-2 mt-6">
+  <div class="card">
+    <h3>Flex JSON</h3>
+    <textarea id="flex-json" class="textarea" name="flex_json" rows="18">{{ flex_json or '' }}</textarea>
+    <div class="page-actions mt-3">
+      <button type="button" class="btn secondary" onclick="renderFlexPreview('flex-json','flex-preview')">Preview Flex</button>
+      <form method="post" action="/notify/validate-flex" onsubmit="document.getElementById('flex-json-hidden-validate').value=document.getElementById('flex-json').value">
+        <input type="hidden" name="flex_json" id="flex-json-hidden-validate">
+        <button class="btn secondary">Validate Flex</button>
+      </form>
+      <form method="post" action="/notify/send-flex" onsubmit="document.getElementById('flex-json-hidden').value=document.getElementById('flex-json').value">
+        <input type="hidden" name="flex_json" id="flex-json-hidden">
+        <button class="btn">Send Flex</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Flex Visual Preview</h3>
+    <div id="flex-preview" class="flex-preview-wrap">
+      <div class="muted">กด Preview Flex เพื่อดูตัวอย่างแบบการ์ด</div>
+    </div>
+    <form method="post" action="/notify/send-minimal-flex" class="mt-6">
+      <button class="btn secondary">Send Minimal Flex</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/notify/auto-flex-preview" class="card">
+    <h3>Auto Build Flex From Query</h3>
+    <div class="mt-3">
+      <label>Approved Query</label>
+      <select name="approved_query_id" class="input">
+        {% for q in approved_queries %}
+        <option value="{{ q.id }}">{{ q.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mt-3">
+      <label>Auto Mode</label>
+      <select name="auto_mode" class="input">
+        <option value="single">Single Bubble</option>
+        <option value="carousel">Carousel</option>
+        <option value="top5">Top 5 Dashboard</option><option value="full_list">Full List Dashboard</option>
+      </select>
+    </div>
+    <button class="btn mt-4">Preview Auto Flex</button>
+  </form>
+
+  <form method="post" action="/notify/auto-flex-send" class="card">
+    <h3>Send Auto Flex From Query</h3>
+    <div class="mt-3">
+      <label>Approved Query</label>
+      <select name="approved_query_id" class="input">
+        {% for q in approved_queries %}
+        <option value="{{ q.id }}">{{ q.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mt-3">
+      <label>Auto Mode</label>
+      <select name="auto_mode" class="input">
+        <option value="single">Single Bubble</option>
+        <option value="carousel">Carousel</option>
+        <option value="top5">Top 5 Dashboard</option><option value="full_list">Full List Dashboard</option>
+      </select>
+    </div>
+    <button class="btn mt-4">Send Auto Flex</button>
+  </form>
+</div>
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/notify/preview" class="card">
+    <h3>Preview From Template + Query</h3>
+    <div class="mt-3">
+      <label>Approved Query</label>
+      <select name="approved_query_id" class="input">
+        {% for q in approved_queries %}
+        <option value="{{ q.id }}">{{ q.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mt-3">
+      <label>Message Template</label>
+      <select name="message_template_id" class="input">
+        {% for t in message_templates %}
+        <option value="{{ t.id }}">{{ t.name }} ({{ t.template_type }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn mt-4">Preview From Template</button>
+  </form>
+
+  <form method="post" action="/notify/send-from-template" class="card">
+    <h3>Send From Template + Query</h3>
+    <div class="mt-3">
+      <label>Approved Query</label>
+      <select name="approved_query_id" class="input">
+        {% for q in approved_queries %}
+        <option value="{{ q.id }}">{{ q.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mt-3">
+      <label>Message Template</label>
+      <select name="message_template_id" class="input">
+        {% for t in message_templates %}
+        <option value="{{ t.id }}">{{ t.name }} ({{ t.template_type }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn mt-4">Send From Template</button>
+  </form>
+</div>
+
+<div class="card mt-6">
+  <h3>Media Library Reference</h3>
+  <div class="media-grid">
+    {% for m in media_files %}
+      <button type="button" class="media-pick-btn" onclick="copyMediaUrl('{{ m.public_url }}')">
+        <div class="media-name">{{ m.original_name }}</div>
+        <div class="muted">{{ m.width }}x{{ m.height }}</div>
+        <div class="media-url">{{ m.public_url }}</div>
+      </button>
+    {% else %}
+      <div class="muted">No media</div>
+    {% endfor %}
+  </div>
+</div>
+
+{% if template_payload %}
+<div class="card mt-6">
+  <div class="muted">Template Payload Preview</div>
+  <div class="json-box mt-3"><pre>{{ pretty_json(template_payload) }}</pre></div>
+</div>
+{% endif %}
+
+{% if data_rows %}
+<div class="card mt-6">
+  <div class="muted">Data Preview จาก Query</div>
+  <div class="json-box mt-3"><pre>{{ pretty_json(data_rows) }}</pre></div>
+</div>
+  {% if query_visual_rows %}
+  <div class="card mt-6">
+    <div class="muted">Visual Preview จาก Query จริง</div>
+    <div class="query-preview-grid mt-3">
+      {% for row in query_visual_rows %}
+      <div class="query-preview-card">
+        <div class="query-preview-title">{{ row.clinic_name or row.name or 'ไม่ระบุคลินิก' }}</div>
+        <div class="query-preview-sub">{{ row.department or row.dept_name or 'ไม่ระบุแผนก' }}</div>
+        <div class="query-preview-metric">{{ row.total_appointment or row.count or 0 }}</div>
+        <div class="query-preview-label">ราย</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+
+{% if result %}
+<div class="card mt-6">
+  <div class="muted">Send Result</div>
+  <div class="json-box mt-3"><pre>{{ pretty_json(result) }}</pre></div>
+</div>
+{% endif %}
+
+<script src="/static/js/flex_preview.js"></script>
+<script>
+if (document.getElementById('flex-json') && document.getElementById('flex-json').value.trim()) {
+  renderFlexPreview('flex-json','flex-preview');
+}
+</script>
+{% endblock %}

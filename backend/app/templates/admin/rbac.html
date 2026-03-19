@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="p-6">
+  <h1 class="text-2xl font-bold">RBAC / Menu Permission</h1>
+  {% for role in roles %}
+  <form method="post" action="/rbac/role/{{ role.id }}" class="card mt-6">
+    <div><strong>{{ role.name }}</strong> ({{ role.code }})</div>
+    <div class="mt-4 grid grid-cols-1 gap-4">
+      {% for perm in permissions %}
+      <label><input type="checkbox" name="permission_ids" value="{{ perm.id }}" {% if perm.code in role_map[role.id] %}checked{% endif %}> {{ perm.name }} — <span class="muted">{{ perm.code }}</span></label>
+      {% endfor %}
+    </div>
+    <button class="btn mt-4">Save Permission</button>
+  </form>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{
+  "type": "bubble",
+  "hero": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      { "type": "text", "text": "{total_appointment}", "size": "4xl", "weight": "bold", "align": "center" },
+      { "type": "text", "text": "ราย", "size": "sm", "align": "center", "color": "#64748b", "margin": "sm" }
+    ],
+    "paddingAll": "24px",
+    "backgroundColor": "#eff6ff"
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "md",
+    "contents": [
+      { "type": "text", "text": "{clinic_name}", "weight": "bold", "size": "lg", "wrap": true },
+      { "type": "text", "text": "แผนกที่นัด", "size": "xs", "color": "#64748b" },
+      { "type": "text", "text": "{department}", "size": "sm", "wrap": true },
+      { "type": "separator", "margin": "md" },
+      { "type": "text", "text": "ส่งเมื่อ {sent_at}", "size": "xs", "color": "#94a3b8", "margin": "md" }
+    ]
+  }
+}
