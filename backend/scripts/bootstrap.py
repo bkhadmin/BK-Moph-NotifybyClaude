@@ -1,3 +1,4 @@
+from app.repositories.permissions import ensure_module53_permissions
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.base import Base
@@ -37,8 +38,17 @@ ROLE_PERMS={
     'user':{'menu.dashboard','menu.queries','menu.templates'}
 }
 
+
+def ensure_module59_schema():
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER TABLE schedule_jobs ADD COLUMN notify_room_id INT NULL"))
+        except Exception:
+            pass
+
 def seed():
     Base.metadata.create_all(bind=engine)
+    ensure_module59_schema()
     db:Session=SessionLocal()
     try:
         role_map={}
@@ -56,6 +66,7 @@ def seed():
         for code,name,path in MENUS:
             if not db.query(Menu).filter(Menu.code==code).first():
                 db.add(Menu(code=code,name=name,path=path))
+        ensure_module53_permissions(db)
         db.commit()
         db.execute(text('DELETE FROM role_permissions'))
         for role_code, perm_codes in ROLE_PERMS.items():
@@ -70,3 +81,13 @@ def seed():
 
 if __name__=='__main__':
     seed()
+
+
+from sqlalchemy import text
+
+def ensure_module59_schema():
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER TABLE schedule_jobs ADD COLUMN notify_room_id INT NULL"))
+        except Exception:
+            pass

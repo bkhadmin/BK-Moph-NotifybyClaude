@@ -52,6 +52,16 @@
 จำนวนผู้ป่วยที่นัด {total_appointment} ราย</textarea></div>
     <div class="mt-3"><label>Hero Image URL</label><input class="input" name="hero_image_url" value=""></div>
     <div class="grid-2 mt-3">
+      <div>
+        <label>Notify Room</label>
+        <select class="input" name="notify_room_id">
+          <option value="">Default from .env</option>
+          {% for room in notify_rooms or [] %}
+          <option value="{{ room.id }}">{{ room.name }}{% if room.room_code %} ({{ room.room_code }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+
       <div><label>Button Label</label><input class="input" name="button_label" value=""></div>
       <div><label>Button URL</label><input class="input" name="button_url" value=""></div>
     </div>

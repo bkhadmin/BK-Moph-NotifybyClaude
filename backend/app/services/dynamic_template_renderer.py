@@ -1,3 +1,4 @@
+from app.services.claim_url_builder import build_claim_url
 import json
 from app.services.flex_table_renderer import build_full_table_flex
 from app.services.flex_transform import as_flex_message_payload
@@ -44,3 +45,28 @@ def build_dynamic_template_payload(template_type:str, content:str, alt_text:str|
     if tt == "flex_carousel":
         return as_flex_message_payload(rows or [], "carousel")
     return None
+
+
+def fill_missing_claim_urls(payload, row=None):
+    try:
+        claim_url = None
+        if isinstance(row, dict):
+            claim_url = row.get("claim_url")
+            if not claim_url and row.get("case_key"):
+                claim_url = build_claim_url(row.get("case_key"))
+        def walk(node):
+            if isinstance(node, dict):
+                if node.get("type") == "button":
+                    action = node.get("action")
+                    if isinstance(action, dict) and action.get("type") == "uri":
+                        if not (action.get("uri") or "").strip() and claim_url:
+                            action["uri"] = claim_url
+                for v in node.values():
+                    walk(v)
+            elif isinstance(node, list):
+                for item in node:
+                    walk(item)
+        walk(payload)
+    except Exception:
+        pass
+    return payload

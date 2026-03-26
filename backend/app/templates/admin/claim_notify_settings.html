@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block body %}
+<style>
+.card, .card * { color: #111827; }
+.card .muted { color: #6b7280 !important; }
+.stat-card { background:#fff; color:#111827; }
+.stat-card .stat-label { color:#6b7280; }
+code { color:#111827; background:#f3f4f6; padding:2px 6px; border-radius:6px; }
+.table td, .table th { color:#111827; }
+.badge.success { color:#065f46 !important; }
+.badge.danger { color:#991b1b !important; }
+</style>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Claim Notify Settings</h1>
+    <div class="muted">การแจ้งเตือนอัตโนมัติหลังมีผู้รับเคส และการตั้งค่าห้องส่งข้อความ MOPH Notify</div>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/notify/rooms">Manage Notify Rooms</a>
+    <a class="btn secondary" href="/notify/test">Open MOPH Notify</a>
+  </div>
+</div>
+
+<div class="stat-grid mt-6">
+  <div class="stat-card">
+    <div class="stat-label">Claim Notify Enabled</div>
+    <div class="stat-value">{{ claim_notify_enabled }}</div>
+  </div>
+  <div class="stat-card success">
+    <div class="stat-label">Notify Rooms ทั้งหมด</div>
+    <div class="stat-value">{{ (notify_rooms or [])|length }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Notify Rooms ที่ Active</div>
+    <div class="stat-value">{{ (active_notify_rooms or [])|length }}</div>
+  </div>
+</div>
+
+<div class="grid-2 mt-6">
+  <div class="card">
+    <h3>วิธีใช้งาน</h3>
+    <div class="item"><strong>ส่งมือ</strong><div class="muted">ไปที่ /notify/test แล้วเลือก Notify Room ก่อนส่ง</div></div>
+    <div class="item"><strong>ส่งตาม Schedule</strong><div class="muted">ไปที่ /schedules แล้วเลือก Notify Room ของ schedule นั้น</div></div>
+    <div class="item"><strong>Fallback</strong><div class="muted">ถ้าไม่เลือกห้อง ระบบจะใช้ค่า default จาก .env</div></div>
+  </div>
+  <div class="card">
+    <h3>หลังรับเคส</h3>
+    <div class="item"><strong>สถานะปัจจุบัน</strong><div class="muted">{% if claim_notify_enabled == 'Y' %}เปิดใช้งาน{% else %}ปิดใช้งาน{% endif %}</div></div>
+    <div class="item"><strong>สิ่งที่จะแจ้ง</strong><div class="muted">ชื่อผู้ป่วย, HN, รายการ, ค่า, แผนก, ผู้รับเคส, เวลารับเคส</div></div>
+    <div class="item"><strong>หมายเหตุ</strong><div class="muted">การแจ้งหลังรับเคสจะใช้ห้อง default จาก .env เว้นแต่คุณจะขยาย logic เพิ่มภายหลัง</div></div>
+  </div>
+</div>
+
+<div class="card mt-6">
+  <h3>Notify Rooms</h3>
+  <table class="table">
+    <thead><tr><th>Name</th><th>Code</th><th>Status</th><th>Note</th></tr></thead>
+    <tbody>
+      {% for room in notify_rooms or [] %}
+      <tr>
+        <td>{{ room.name }}</td>
+        <td>{{ room.room_code or '-' }}</td>
+        <td><span class="badge {% if room.is_active == 'Y' %}success{% else %}danger{% endif %}">{{ room.is_active }}</span></td>
+        <td>{{ room.note or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">No rooms</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

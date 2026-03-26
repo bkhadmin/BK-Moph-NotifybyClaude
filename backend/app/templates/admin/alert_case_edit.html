@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <h1 class="page-title">Edit Alert Case</h1>
+</div>
+
+<div class="card mt-6">
+  <form method="post" action="/alerts/cases/{{ alert_case.id }}/edit">
+    <div class="grid-2">
+      <div>
+        <label>Status</label>
+        <select class="input" name="status_value">
+          <option value="NEW" {% if alert_case.status == 'NEW' %}selected{% endif %}>NEW</option>
+          <option value="CLAIMED" {% if alert_case.status == 'CLAIMED' %}selected{% endif %}>CLAIMED</option>
+        </select>
+      </div>
+      <div>
+        <label>Claimed By</label>
+        <input class="input" name="claimed_by" value="{{ alert_case.claimed_by or '' }}">
+      </div>
+    </div>
+    <div class="mt-3">
+      <label>Claimed At (YYYY-MM-DD HH:MM:SS)</label>
+      <input class="input" name="claimed_at" value="{{ alert_case.claimed_at or '' }}">
+    </div>
+    <div class="page-actions mt-4">
+      <button class="btn" type="submit">Save</button>
+      <a class="btn secondary" href="/alerts/cases">Back</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

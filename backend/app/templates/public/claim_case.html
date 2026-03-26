@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>รับเคส LAB วิกฤต</title>
+  <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;color:#0f172a}
@@ -28,17 +29,21 @@
       <div class="err row">{{ error }}</div>
     {% endif %}
     {% if success %}
+    <div class="alert success">รับเคสสำเร็จ{% if case and case.claim_notify_status == 'success' %} และแจ้งเตือนเรียบร้อยแล้ว{% endif %}</div>
       <div class="ok row">รับเคสเรียบร้อยแล้ว โดย {{ case.claimed_by }} เมื่อ {{ case.claimed_at }}</div>
     {% endif %}
 
-    {% if case.status != 'CLAIMED' %}
+    {% if case and case.status != 'CLAIMED' %}
     <form method="post" action="/alerts/claim" class="row">
       <input type="hidden" name="case_key" value="{{ case.case_key }}">
+      <input type="hidden" name="expires" value="{{ request.query_params.get('expires', '') }}">
+      <input type="hidden" name="sig" value="{{ request.query_params.get('sig', '') }}">
       <label>ชื่อผู้รับเคส</label>
       <input class="input" name="receiver_name" placeholder="กรอกชื่อผู้รับเคส">
       <div class="row"><button class="btn" type="submit">ยืนยันรับเคส</button></div>
     </form>
     {% endif %}
+    <div class="row"><a class="btn" href="line://">กลับไป LINE</a></div>
   </div>
 </body>
 </html>

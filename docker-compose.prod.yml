@@ -32,6 +32,9 @@ services:
     env_file: [.env]
     environment:
       TZ: Asia/Bangkok
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      CLAIM_SIGNING_SECRET: ${CLAIM_SIGNING_SECRET:-}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-127.0.0.1,localhost,app,app:8000,nginx,bk_app,bkalert.bkhospital.go.th}
     command: >
       sh -c "python scripts/bootstrap.py &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -53,6 +56,9 @@ services:
     env_file: [.env]
     environment:
       TZ: Asia/Bangkok
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      CLAIM_SIGNING_SECRET: ${CLAIM_SIGNING_SECRET:-}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-127.0.0.1,localhost,app,app:8000,nginx,bk_app,bkalert.bkhospital.go.th}
     command: python -m app.worker
     depends_on:
       mysql:
@@ -67,6 +73,9 @@ services:
     env_file: [.env]
     environment:
       TZ: Asia/Bangkok
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      CLAIM_SIGNING_SECRET: ${CLAIM_SIGNING_SECRET:-}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-127.0.0.1,localhost,app,app:8000,nginx,bk_app,bkalert.bkhospital.go.th}
     command: python -m app.beat
     depends_on:
       mysql:
@@ -79,6 +88,9 @@ services:
     env_file: [.env]
     environment:
       TZ: Asia/Bangkok
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      CLAIM_SIGNING_SECRET: ${CLAIM_SIGNING_SECRET:-}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-127.0.0.1,localhost,app,app:8000,nginx,bk_app,bkalert.bkhospital.go.th}
     command: python -m app.worker_scheduler
     restart: unless-stopped
     depends_on:
@@ -107,6 +119,28 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: bk-cloudflared
+    restart: always
+    depends_on:
+      nginx:
+        condition: service_started
+    env_file: [.env]
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+
+  adminer:
+    image: adminer:4
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+      TZ: Asia/Bangkok
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
 
 volumes:
   mysql_data:

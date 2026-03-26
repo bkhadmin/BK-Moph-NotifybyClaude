@@ -11,6 +11,7 @@ class ScheduleJob(Base):
     interval_minutes:Mapped[int|None]=mapped_column(Integer, nullable=True)
     approved_query_id:Mapped[int|None]=mapped_column(Integer, nullable=True)
     message_template_id:Mapped[int|None]=mapped_column(Integer, nullable=True)
+    notify_room_id:Mapped[int|None]=mapped_column(Integer, nullable=True)
     next_run_at:Mapped[object|None]=mapped_column(DateTime, nullable=True)
     last_run_at:Mapped[object|None]=mapped_column(DateTime, nullable=True)
     is_active:Mapped[str]=mapped_column(String(1), default='Y', nullable=False)

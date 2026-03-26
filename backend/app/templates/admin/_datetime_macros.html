@@ -1,0 +1,3 @@
+{% macro dt(v) -%}
+{{ v.strftime('%d/%m/%Y %H:%M:%S') if v else '-' }}
+{%- endmacro %}

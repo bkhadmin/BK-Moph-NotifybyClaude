@@ -1,0 +1,7 @@
+tunnel: bk-moph-notify
+credentials-file: /etc/cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: alert.bkhospital.go.th
+    service: http://localhost:8012
+  - service: http_status:404

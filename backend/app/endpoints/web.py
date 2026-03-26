@@ -1,32 +1,109 @@
+from app.services.timezone_write import bangkok_now_naive
+from app.services.alert_case_service import list_open_alert_cases
+
+
+def _fmt_dt(dt):
+    if not dt:
+        return ''
+    try:
+        return format_bangkok(dt)
+    except Exception:
+        return str(dt)
+
+def _minutes_between(start_dt, end_dt):
+    if not start_dt or not end_dt:
+        return None
+    try:
+        from app.services.timezone_utils import to_bangkok
+        s = to_bangkok(start_dt)
+        e = to_bangkok(end_dt)
+        return round((e - s).total_seconds() / 60.0, 2)
+    except Exception:
+        return None
+
+def _alert_case_report_rows(cases):
+    rows = []
+    for c in cases or []:
+        sent_at = c.first_sent_at or c.last_sent_at
+        receive_minutes = _minutes_between(sent_at, c.claimed_at)
+        rows.append({
+            'id': c.id,
+            'case_key': c.case_key,
+            'status': c.status,
+            'patient_hn': c.patient_hn or '',
+            'patient_name': c.patient_name or '',
+            'department': c.department or '',
+            'item_name': c.item_name or '',
+            'item_value': c.item_value or '',
+            'report_date': c.report_date_text or '',
+            'report_time': c.report_time_text or '',
+            'last_sent_at': _fmt_dt(sent_at),
+            'claimed_by': c.claimed_by or '',
+            'claimed_at': _fmt_dt(c.claimed_at),
+            'minutes_to_claim': receive_minutes if receive_minutes is not None else '',
+            'sent_count': c.sent_count or 0,
+            'id': _fmt_dt(c.id),
+            'claim_notify_sent_at': _fmt_dt(getattr(c, 'claim_notify_sent_at', None)),
+            'claim_notify_status': getattr(c, 'claim_notify_status', '') or '',
+        })
+    return rows
+
+def _alert_case_dashboard(rows):
+    total = len(rows)
+    claimed = len([r for r in rows if r.get('status') == 'CLAIMED'])
+    pending = len([r for r in rows if r.get('status') != 'CLAIMED'])
+    with_sent = [r for r in rows if r.get('last_sent_at')]
+    with_claim_minutes = [float(r['minutes_to_claim']) for r in rows if str(r.get('minutes_to_claim')).strip() not in ('', 'None')]
+    avg_claim_minutes = round(sum(with_claim_minutes) / len(with_claim_minutes), 2) if with_claim_minutes else 0
+    claimed_today = len([r for r in rows if r.get('claimed_at') and r['claimed_at'][:10] == today_bangkok_str()])
+    return {
+        'total_cases': total,
+        'claimed_cases': claimed,
+        'pending_cases': pending,
+        'sent_cases': len(with_sent),
+        'avg_claim_minutes': avg_claim_minutes,
+        'claimed_today': claimed_today,
+        'claim_notify_success': len([r for r in rows if (r.get('claim_notify_status') or '').lower() == 'success']),
+    }
+
+from io import BytesIO
 import json
+import os
 from datetime import datetime
-from fastapi import APIRouter,Request,Form,Depends,status,HTTPException,UploadFile,File
+
+from fastapi import APIRouter, Request, Form, Depends, status, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+
 from app.core.config import settings
-from app.core.csrf import new_token,valid
-from app.core.session import create_session,get_session,destroy_session
+from app.core.csrf import new_token, valid
+from app.core.session import create_session, get_session, destroy_session
 from app.core.security import verify_password, hash_password
 from app.db.session import get_db
-from app.repositories.users import get_by_username,get_by_id,get_all as get_users,upsert_provider_user,update_role,create_local_user,update_user,delete_user
-from app.repositories.roles import get_by_code,get_all as get_roles
+
+from app.repositories.users import get_by_username, get_by_id, get_all as get_users, upsert_provider_user, update_role, create_local_user, update_user, delete_user
+from app.repositories.roles import get_by_code, get_all as get_roles
 from app.repositories.permissions import get_all as get_permissions
-from app.repositories.access_logs import write_log,get_all as get_access_logs
-from app.repositories.ip_bans import get_by_ip,touch_fail,clear_fail
-from app.repositories.role_permissions import set_role_permissions,get_permission_codes_for_role
+from app.repositories.access_logs import write_log, get_all as get_access_logs
+from app.repositories.ip_bans import get_by_ip, touch_fail, clear_fail
+from app.repositories.role_permissions import set_role_permissions, get_permission_codes_for_role
 from app.repositories.approved_queries import get_all as get_queries, create_item as create_query, get_by_id as get_query_by_id, update_item as update_query, delete_item as delete_query
 from app.repositories.message_templates import get_all as get_templates, create_item as create_template, get_by_id as get_template_by_id, update_item as update_template, delete_item as delete_template, clone_item as clone_template
 from app.repositories.schedule_jobs import get_all as get_jobs, create_item as create_job, get_by_id as get_job_by_id, update_item as update_job, delete_item as delete_job
 from app.repositories.schedule_job_logs import get_recent as get_schedule_logs
-from app.worker_scheduler import run_job_now
 from app.repositories.send_logs import get_all as get_send_logs
 from app.repositories.media_files import create_item as create_media, get_all as get_media
+from app.repositories.notify_rooms import get_all as get_notify_rooms, get_active as get_active_notify_rooms, get_by_id as get_notify_room_by_id, create_item as create_notify_room, update_item as update_notify_room, delete_item as delete_notify_room
 from app.repositories.delivery_statuses import get_all as get_delivery_statuses
 from app.repositories.provider_profiles import get_all as get_provider_profiles, get_by_id as get_provider_profile_by_id, update_profile_manual
 from app.repositories.provider_profile_histories import get_all_for_profile
+from app.repositories.alert_cases import get_all as get_alert_cases, get_by_case_key as get_alert_case_by_key, get_by_id as get_alert_case_by_id, update_item as update_alert_case
+
+from app.worker_scheduler import run_job_now
 from app.services.rbac import allowed_menu
-from app.services.provider_auth import provider_login_url,exchange_profile,test_provider_config
+from app.services.provider_auth import provider_login_url, exchange_profile, test_provider_config
+from app.services.sso_service import verify_sso_token, SSOError
 from app.services.hosxp_query import preview_query, test_connection
 from app.services.sql_guard import ensure_safe_select
 from app.services.template_render import render_text_template, build_message_payload
@@ -46,10 +123,34 @@ from app.services.template_porter import export_templates_json, import_templates
 from app.services.flex_template_merger import build_flex_payload_from_template_rows
 from app.services.dynamic_template_renderer import build_dynamic_template_payload
 from app.services.dynamic_flex_fields import get_available_fields
+from app.services.alert_case_service import enrich_alert_rows, filter_rows_for_send, mark_rows_sent, claim_case, ensure_tables
+from app.services.claim_security import verify_claim_signature
+from app.services.timezone_utils import format_bangkok, today_bangkok_str, bangkok_now, utcnow
+from app.services.claim_notify_service import notify_case_claimed
+
+def ensure_alert_tables():
+    return ensure_tables()
+
+def _public_base_url(request: Request) -> str:
+    value = (os.getenv("PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    if value:
+        return value
+    return str(request.base_url).rstrip("/")
 
 router=APIRouter()
 templates=Jinja2Templates(directory='app/templates')
 
+
+
+def _normalize_schedule_input(schedule_type: str, cron_value: str | None):
+    raw = (cron_value or '').strip()
+    if schedule_type in ('daily', 'daily_time', 'every_day_time'):
+        if raw and '.' in raw and ':' not in raw:
+            raw = raw.replace('.', ':')
+        if re.match(r'^\d{1,2}:\d{2}$', raw):
+            hh, mm = raw.split(':', 1)
+            return f"{int(hh):02d}:{mm}"
+    return raw
 def client_ip(request:Request)->str:
     return request.headers.get('x-forwarded-for', request.client.host if request.client else 'unknown').split(',')[0].strip()
 
@@ -111,7 +212,15 @@ def ctx(request:Request, db:Session, session:dict|None, **extra):
 
 def render_login(request:Request, error:str|None=None):
     token=new_token()
-    response=templates.TemplateResponse('auth/login.html', {'request':request,'csrf_token':token,'error':error,'provider_login_enabled':settings.provider_login_enabled})
+    ctx={
+        'request':request,
+        'csrf_token':token,
+        'error':error,
+        'provider_login_enabled':settings.provider_login_enabled,
+        'sso_enabled':settings.sso_enabled and bool(settings.sso_jwt_secret),
+        'providerlogin_url':getattr(settings,'providerlogin_url','http://localhost:3000'),
+    }
+    response=templates.TemplateResponse('auth/login.html', ctx)
     response.set_cookie(settings.csrf_cookie_name, token, httponly=False, samesite=settings.session_cookie_samesite, path='/')
     return response
 
@@ -177,6 +286,42 @@ async def provider_callback(request:Request, code:str|None=None, error:str|None=
         write_log(db, None, ip, 'login.provider', 'failed', str(exc))
         return render_login(request, f'Provider callback error: {exc}')
 
+@router.get('/auth/sso')
+def sso_verify(request:Request, sso_token:str|None=None, db:Session=Depends(get_db)):
+    """รับ JWT จาก providerlogin แล้วสร้าง session"""
+    ip = client_ip(request)
+    if not settings.sso_enabled:
+        write_log(db, None, ip, 'login.sso', 'failed', 'SSO disabled')
+        return render_login(request, 'SSO ถูกปิดการใช้งาน')
+    if not sso_token:
+        write_log(db, None, ip, 'login.sso', 'failed', 'missing sso_token')
+        return render_login(request, 'ไม่พบ SSO Token กรุณาเข้าสู่ระบบผ่านระบบกลาง')
+    try:
+        profile = verify_sso_token(sso_token)
+        default_role = get_by_code(db, 'user')
+        user = upsert_provider_user(db, profile, default_role.id if default_role else None)
+        if user.is_active != 'Y':
+            write_log(db, user.username, ip, 'login.sso', 'failed', 'inactive user')
+            return render_login(request, 'บัญชีผู้ใช้นี้ถูกปิดการใช้งาน')
+        sid = create_session({
+            'user_id':      user.id,
+            'username':     user.username,
+            'display_name': user.display_name,
+            'role_id':      user.role_id,
+        })
+        write_log(db, user.username, ip, 'login.sso', 'success',
+                  f"provider_id={profile.get('provider_id')}")
+        response = RedirectResponse('/dashboard', status_code=302)
+        response.set_cookie(settings.session_cookie_name, sid,
+                            httponly=True, samesite=settings.session_cookie_samesite, path='/')
+        return response
+    except SSOError as e:
+        write_log(db, None, ip, 'login.sso', 'failed', str(e))
+        return render_login(request, str(e))
+    except Exception as exc:
+        write_log(db, None, ip, 'login.sso', 'failed', str(exc))
+        return render_login(request, 'SSO error เกิดข้อผิดพลาด กรุณาลองใหม่')
+
 @router.post('/api/v1/notify/status/callback')
 async def notify_status_callback(request:Request, db:Session=Depends(get_db)):
     payload = await request.json()
@@ -187,7 +332,7 @@ async def notify_status_callback(request:Request, db:Session=Depends(get_db)):
 def dashboard(request:Request, db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'dashboard')
-    return templates.TemplateResponse('admin/dashboard.html', ctx(request, db, session, users=get_users(db), logs=get_access_logs(db), send_logs=get_send_logs(db), jobs=get_jobs(db), media_files=get_media(db), delivery_statuses=get_delivery_statuses(db), provider_profiles=get_provider_profiles(db)))
+    return templates.TemplateResponse('admin/dashboard.html', ctx(request, db, session, users=get_users(db), logs=get_access_logs(db), send_logs=get_send_logs(db), jobs=get_jobs(db), media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), delivery_statuses=get_delivery_statuses(db), provider_profiles=get_provider_profiles(db)))
 
 @router.get('/system/connections')
 async def system_connections(request:Request, db:Session=Depends(get_db)):
@@ -225,6 +370,7 @@ def reports_page(request:Request, db:Session=Depends(get_db)):
         "schedules": len(get_jobs(db)),
         "approved_queries": len(get_queries(db)),
         "templates": len(get_templates(db)),
+        "alert_cases": len(get_alert_cases(db)),
     }
     charts = {
         "access_status": counter_from_rows(access_rows, "status"),
@@ -354,8 +500,21 @@ def profiles_export(request:Request, q:str='', format:str='csv', db:Session=Depe
 def access_logs_page(request:Request, q:str='', page:int=1, per_page:int=20, db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'logs')
-    access_rows = [{"actor": x.actor, "ip_address": x.ip_address, "action": x.action, "status": x.status, "detail": x.detail} for x in get_access_logs(db)]
-    send_rows = [{"id": x.id, "actor": x.actor, "channel": x.channel, "status": x.status, "retry_count": x.retry_count, "detail": x.detail} for x in get_send_logs(db)]
+    access_rows = [{
+        "username": getattr(x, "username", None) or getattr(x, "actor", None) or "-",
+        "ip_address": getattr(x, "ip_address", None) or "-",
+        "action": getattr(x, "action", None) or "-",
+        "status": getattr(x, "status", None) or "-",
+        "detail": getattr(x, "detail", None) or "-",
+    } for x in get_access_logs(db)]
+    send_rows = [{
+        "id": getattr(x, "id", None),
+        "username": getattr(x, "actor", None) or getattr(x, "username", None) or "-",
+        "channel": getattr(x, "channel", None) or "-",
+        "status": getattr(x, "status", None) or "-",
+        "retry_count": getattr(x, "retry_count", None) or 0,
+        "detail": getattr(x, "detail", None) or "-",
+    } for x in get_send_logs(db)]
     delivery_rows = [{"send_log_id": x.send_log_id, "external_message_id": x.external_message_id, "status": x.status, "provider_status": x.provider_status, "detail": x.detail} for x in get_delivery_statuses(db)]
     access_rows = _filter_rows(access_rows, q)
     send_rows = _filter_rows(send_rows, q)
@@ -370,9 +529,9 @@ def logs_export(kind:str, request:Request, q:str='', format:str='csv', db:Sessio
     session=require_session(request)
     require_menu(db, session, 'logs')
     if kind == 'access':
-        rows = [{"actor": x.actor, "ip_address": x.ip_address, "action": x.action, "status": x.status, "detail": x.detail} for x in get_access_logs(db)]
+        rows = [{"username": getattr(x, 'actor', None) or getattr(x, 'username', None) or '-', "ip_address": x.ip_address, "action": x.action, "status": x.status, "detail": x.detail} for x in get_access_logs(db)]
     elif kind == 'send':
-        rows = [{"id": x.id, "actor": x.actor, "channel": x.channel, "status": x.status, "retry_count": x.retry_count, "detail": x.detail} for x in get_send_logs(db)]
+        rows = [{"id": x.id, "username": getattr(x, 'actor', None) or getattr(x, 'username', None) or '-', "channel": x.channel, "status": x.status, "retry_count": x.retry_count, "detail": x.detail} for x in get_send_logs(db)]
     else:
         rows = [{"send_log_id": x.send_log_id, "external_message_id": x.external_message_id, "status": x.status, "provider_status": x.provider_status, "detail": x.detail} for x in get_delivery_statuses(db)]
     rows = _filter_rows(rows, q)
@@ -455,7 +614,7 @@ def templates_page(request:Request, edit_id:int|None=None, db:Session=Depends(ge
     require_menu(db, session, 'templates')
     flex_sample = '{"type":"bubble","body":{"type":"box","layout":"vertical","contents":[{"type":"text","text":"สวัสดี {name}"},{"type":"text","text":"หน่วยงาน {organization_name}","size":"sm"}]}}'
     edit_row = get_template_by_id(db, edit_id) if edit_id else None
-    return templates.TemplateResponse('admin/templates.html', ctx(request, db, session, message_templates=get_templates(db), render_result=None, media_files=get_media(db), flex_sample=flex_sample, edit_row=edit_row))
+    return templates.TemplateResponse('admin/templates.html', ctx(request, db, session, message_templates=get_templates(db), render_result=None, media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_sample=flex_sample, edit_row=edit_row))
 
 @router.post('/templates')
 def create_template_page(request:Request, name:str=Form(...), template_type:str=Form(...), content:str=Form(...), alt_text:str=Form(''), db:Session=Depends(get_db)):
@@ -495,13 +654,13 @@ def render_template_page(request:Request, content:str=Form(...), variables_json:
     render_result = render_text_template(content, variables)
     write_log(db, session.get('username'), client_ip(request), 'template.render', 'success', None)
     flex_sample = '{"type":"bubble","body":{"type":"box","layout":"vertical","contents":[{"type":"text","text":"สวัสดี {name}"},{"type":"text","text":"หน่วยงาน {organization_name}","size":"sm"}]}}'
-    return templates.TemplateResponse('admin/templates.html', ctx(request, db, session, message_templates=get_templates(db), render_result=render_result, media_files=get_media(db), flex_sample=flex_sample, edit_row=None))
+    return templates.TemplateResponse('admin/templates.html', ctx(request, db, session, message_templates=get_templates(db), render_result=render_result, media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_sample=flex_sample, edit_row=None))
 
 @router.get('/media')
 def media_page(request:Request, db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'media')
-    return templates.TemplateResponse('admin/media.html', ctx(request, db, session, media_files=get_media(db)))
+    return templates.TemplateResponse('admin/media.html', ctx(request, db, session, media_files=get_media(db), notify_rooms=get_active_notify_rooms(db)))
 
 @router.post('/media')
 async def media_upload(request:Request, image:UploadFile=File(...), db:Session=Depends(get_db)):
@@ -515,6 +674,45 @@ async def media_upload(request:Request, image:UploadFile=File(...), db:Session=D
     write_log(db, session.get('username'), client_ip(request), 'media.upload', 'success', saved['public_url'])
     return RedirectResponse('/media', status_code=302)
 
+
+
+@router.get('/notify/rooms')
+def notify_rooms_page(request:Request, edit_id:int|None=None, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify_rooms')
+    edit_room = get_notify_room_by_id(db, edit_id) if edit_id else None
+    return templates.TemplateResponse('admin/notify_rooms.html', ctx(
+        request, db, session,
+        notify_rooms=get_notify_rooms(db),
+        edit_room=edit_room,
+    ))
+
+@router.post('/notify/rooms/create')
+def notify_rooms_create(request:Request, name:str=Form(...), room_code:str=Form(''), client_key:str=Form(...), secret_key:str=Form(...), is_active:str=Form('Y'), note:str=Form(''), db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify_rooms')
+    create_notify_room(db, name=name, room_code=room_code, client_key=client_key, secret_key=secret_key, is_active=is_active, note=note)
+    return RedirectResponse('/notify/rooms', status_code=302)
+
+@router.post('/notify/rooms/{room_id}/update')
+def notify_rooms_update(room_id:int, request:Request, name:str=Form(...), room_code:str=Form(''), client_key:str=Form(...), secret_key:str=Form(...), is_active:str=Form('Y'), note:str=Form(''), db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify_rooms')
+    row = get_notify_room_by_id(db, room_id)
+    if not row:
+        raise HTTPException(status_code=404, detail='room not found')
+    update_notify_room(db, row, name=name.strip(), room_code=(room_code or '').strip() or None, client_key=client_key.strip(), secret_key=secret_key.strip(), is_active=is_active or 'Y', note=(note or '').strip() or None)
+    return RedirectResponse('/notify/rooms', status_code=302)
+
+@router.get('/notify/rooms/{room_id}/delete')
+def notify_rooms_delete(room_id:int, request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify_rooms')
+    row = get_notify_room_by_id(db, room_id)
+    if row:
+        delete_notify_room(db, row)
+    return RedirectResponse('/notify/rooms', status_code=302)
+
 @router.get('/notify/test')
 def notify_page(request:Request, flex_json:str|None=None, db:Session=Depends(get_db)):
     session=require_session(request)
@@ -526,7 +724,7 @@ def notify_page(request:Request, flex_json:str|None=None, db:Session=Depends(get
             {"type":"text","text":"รายละเอียดข้อความ", "wrap":True, "margin":"md"}
         ]}
     }, ensure_ascii=False, indent=2)
-    return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=None, send_error=None, template_payload=None, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), flex_json=default_flex))
+    return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=None, send_error=None, template_payload=None, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=default_flex))
 
 @router.post('/notify/test')
 async def notify_send(request:Request, message_text:str=Form(...), db:Session=Depends(get_db)):
@@ -536,10 +734,10 @@ async def notify_send(request:Request, message_text:str=Form(...), db:Session=De
     try:
         result, _ = await send_with_log(db, session.get('username'), payload, 'manual text send')
         write_log(db, session.get('username'), client_ip(request), 'notify.send', 'success', 'manual text send')
-        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=result, send_error=None, template_payload=payload, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), flex_json=None))
+        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=result, send_error=None, template_payload=payload, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=None))
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'notify.send', 'failed', str(exc))
-        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=None, send_error=str(exc), template_payload=payload, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), flex_json=None))
+        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=None, send_error=str(exc), template_payload=payload, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=None))
 
 @router.post('/notify/send-flex')
 async def notify_send_flex(request:Request, flex_json:str=Form(...), db:Session=Depends(get_db)):
@@ -553,10 +751,10 @@ async def notify_send_flex(request:Request, flex_json:str=Form(...), db:Session=
             raise ValueError("Flex validation failed: " + "; ".join(errors))
         result, _ = await send_with_log(db, session.get('username'), payload, 'manual flex send')
         write_log(db, session.get('username'), client_ip(request), 'notify.send.flex', 'success', 'manual flex send')
-        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=result, send_error=None, validation_errors=None, template_payload=payload, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), flex_json=flex_json))
+        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=result, send_error=None, validation_errors=None, template_payload=payload, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=flex_json))
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'notify.send.flex', 'failed', str(exc))
-        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=None, send_error=str(exc), validation_errors=None, template_payload=None, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), flex_json=flex_json))
+        return templates.TemplateResponse('admin/notify_test.html', ctx(request, db, session, result=None, send_error=str(exc), validation_errors=None, template_payload=None, data_rows=None, query_visual_rows=None, approved_queries=get_queries(db), message_templates=get_templates(db), media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=flex_json))
 
 @router.post('/notify/flex-builder')
 def notify_flex_builder(
@@ -643,7 +841,7 @@ def notify_flex_builder(
         result=None, send_error=None, validation_errors=None,
         template_payload=None, data_rows=None, query_visual_rows=None,
         approved_queries=get_queries(db), message_templates=get_templates(db),
-        media_files=get_media(db), flex_json=flex_json
+        media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=flex_json
     ))
 
 @router.post('/notify/validate-flex')
@@ -663,7 +861,7 @@ def notify_validate_flex(request:Request, flex_json:str=Form(...), db:Session=De
         result=None, send_error=None, validation_errors=validation_errors,
         template_payload=None, data_rows=None, query_visual_rows=None,
         approved_queries=get_queries(db), message_templates=get_templates(db),
-        media_files=get_media(db), flex_json=flex_json
+        media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=flex_json
     ))
 
 @router.post('/notify/send-minimal-flex')
@@ -679,7 +877,7 @@ async def notify_send_minimal_flex(request:Request, db:Session=Depends(get_db)):
             result=result, send_error=None, validation_errors=[],
             template_payload=payload, data_rows=None, query_visual_rows=None,
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
         ))
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'notify.send.minimal_flex', 'failed', str(exc))
@@ -688,7 +886,7 @@ async def notify_send_minimal_flex(request:Request, db:Session=Depends(get_db)):
             result=None, send_error=str(exc), validation_errors=None,
             template_payload=payload, data_rows=None, query_visual_rows=None,
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
         ))
 
 @router.post('/notify/auto-flex-preview')
@@ -710,7 +908,7 @@ def notify_auto_flex_preview(
         result=None, send_error=None, template_payload=None,
         data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
         approved_queries=get_queries(db), message_templates=get_templates(db),
-        media_files=get_media(db), flex_json=flex_json
+        media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=flex_json
     ))
 
 @router.post('/notify/auto-flex-send')
@@ -734,7 +932,7 @@ async def notify_auto_flex_send(
             result=result, send_error=None, template_payload=payload,
             data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
         ))
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'notify.send.auto_flex', 'failed', str(exc))
@@ -743,12 +941,12 @@ async def notify_auto_flex_send(
             result=None, send_error=str(exc), template_payload=payload,
             data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=json.dumps(payload[0]["contents"], ensure_ascii=False, indent=2)
         ))
 
 
 @router.post('/notify/preview')
-def notify_preview(request:Request, approved_query_id:int=Form(...), message_template_id:int=Form(...), db:Session=Depends(get_db)):
+def notify_preview(request:Request, approved_query_id:int=Form(...), message_template_id:int=Form(...), notify_room_id:int|None=Form(None), db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     q = get_query_by_id(db, approved_query_id)
@@ -758,7 +956,7 @@ def notify_preview(request:Request, approved_query_id:int=Form(...), message_tem
     try:
         ensure_alert_tables()
         data = preview_query(q.sql_text, max_rows=q.max_rows)
-        rows = enrich_alert_rows(db, data['rows'], str(request.base_url).rstrip('/'))
+        rows = enrich_alert_rows(db, data['rows'], _public_base_url(request))
         rows = filter_rows_for_send(rows)
         dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows)
         if dynamic_payload is not None:
@@ -774,7 +972,7 @@ def notify_preview(request:Request, approved_query_id:int=Form(...), message_tem
             result=None, send_error=None, validation_errors=None,
             template_payload=payload, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=flex_json
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=flex_json
         ))
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'notify.preview.template', 'failed', str(exc))
@@ -783,11 +981,11 @@ def notify_preview(request:Request, approved_query_id:int=Form(...), message_tem
             result=None, send_error=f'Preview failed: {exc}', validation_errors=None,
             template_payload=None, data_rows=[], query_visual_rows=[],
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=None
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=None
         ), status_code=200)
 
 @router.post('/notify/send-from-template')
-async def notify_send_from_template(request:Request, approved_query_id:int=Form(...), message_template_id:int=Form(...), db:Session=Depends(get_db)):
+async def notify_send_from_template(request:Request, approved_query_id:int=Form(...), message_template_id:int=Form(...), notify_room_id:int|None=Form(None), db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     q = get_query_by_id(db, approved_query_id)
@@ -795,7 +993,7 @@ async def notify_send_from_template(request:Request, approved_query_id:int=Form(
     if not q or not t:
         raise HTTPException(status_code=404, detail='query or template not found')
     data = preview_query(q.sql_text, max_rows=q.max_rows)
-    rows = enrich_alert_rows(db, data['rows'], str(request.base_url).rstrip('/'))
+    rows = enrich_alert_rows(db, data['rows'], _public_base_url(request))
     rows = filter_rows_for_send(rows)
     dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows)
     if dynamic_payload is not None:
@@ -805,7 +1003,7 @@ async def notify_send_from_template(request:Request, approved_query_id:int=Form(
     else:
         messages = [build_message_payload(t.template_type, t.content, t.alt_text, row) for row in rows]
     try:
-        result, _ = await send_with_log(db, session.get('username'), messages, f'approved_query_id={q.id}, template_id={t.id}')
+        result, _ = await send_with_log(db, session.get('username'), messages, f'approved_query_id={q.id}, template_id={t.id}', notify_room_id=notify_room_id)
         mark_rows_sent(db, rows)
         write_log(db, session.get('username'), client_ip(request), 'notify.send.template', 'success', f'rows={len(rows)}')
         return templates.TemplateResponse('admin/notify_test.html', ctx(
@@ -813,7 +1011,7 @@ async def notify_send_from_template(request:Request, approved_query_id:int=Form(
             result=result, send_error=None, validation_errors=None,
             template_payload=messages, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=json.dumps(messages[0]["contents"], ensure_ascii=False, indent=2) if isinstance(messages, list) and messages and messages[0].get("type") == "flex" else None
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=json.dumps(messages[0]["contents"], ensure_ascii=False, indent=2) if isinstance(messages, list) and messages and messages[0].get("type") == "flex" else None
         ))
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'notify.send.template', 'failed', str(exc))
@@ -822,7 +1020,7 @@ async def notify_send_from_template(request:Request, approved_query_id:int=Form(
             result=None, send_error=str(exc), validation_errors=None,
             template_payload=messages, data_rows=rows[:10], query_visual_rows=_query_visual_rows(rows),
             approved_queries=get_queries(db), message_templates=get_templates(db),
-            media_files=get_media(db), flex_json=json.dumps(messages[0]["contents"], ensure_ascii=False, indent=2) if isinstance(messages, list) and messages and messages[0].get("type") == "flex" else None
+            media_files=get_media(db), notify_rooms=get_active_notify_rooms(db), flex_json=json.dumps(messages[0]["contents"], ensure_ascii=False, indent=2) if isinstance(messages, list) and messages and messages[0].get("type") == "flex" else None
         ))
 
 
@@ -846,10 +1044,11 @@ def schedules_page(request:Request, db:Session=Depends(get_db)):
             'interval_minutes': str(edit_job.interval_minutes or ''),
             'approved_query_id': edit_job.approved_query_id or '',
             'message_template_id': edit_job.message_template_id or '',
+            'notify_room_id': getattr(edit_job, 'notify_room_id', '') or '',
             'is_active': edit_job.is_active,
             'retry_limit': str(cfg.get('retry_limit', 3)),
         }
-    return templates.TemplateResponse('admin/schedules.html', ctx(request, db, session, jobs=get_jobs(db), approved_queries=get_queries(db), message_templates=get_templates(db), form_error=None, form_values=form_values))
+    return templates.TemplateResponse('admin/schedules.html', ctx(request, db, session, jobs=get_jobs(db), approved_queries=get_queries(db), message_templates=get_templates(db), notify_rooms=get_active_notify_rooms(db), form_error=None, form_values=form_values))
 
 
 @router.post('/schedules')
@@ -862,6 +1061,7 @@ def schedules_create(
     interval_minutes:str=Form(''),
     approved_query_id:int|None=Form(None),
     message_template_id:int|None=Form(None),
+    notify_room_id:int|None=Form(None),
     is_active:str=Form('Y'),
     retry_limit:str=Form('3'),
     db:Session=Depends(get_db)
@@ -888,6 +1088,7 @@ def schedules_create(
                 interval_minutes=normalized_interval,
                 approved_query_id=approved_query_id,
                 message_template_id=message_template_id,
+                notify_room_id=notify_room_id,
                 next_run_at=next_run_at,
                 is_active=is_active,
                 payload_json=payload_json,
@@ -901,6 +1102,7 @@ def schedules_create(
                 interval_minutes=normalized_interval,
                 approved_query_id=approved_query_id,
                 message_template_id=message_template_id,
+                notify_room_id=notify_room_id,
                 next_run_at=next_run_at,
                 is_active=is_active,
                 payload_json=payload_json,
@@ -916,6 +1118,7 @@ def schedules_create(
                 jobs=get_jobs(db),
                 approved_queries=get_queries(db),
                 message_templates=get_templates(db),
+                notify_rooms=get_active_notify_rooms(db),
                 form_error=str(exc),
                 form_values={
                     'id': schedule_id,
@@ -925,6 +1128,7 @@ def schedules_create(
                     'interval_minutes': str(interval_minutes or '').strip(),
                     'approved_query_id': approved_query_id or '',
                     'message_template_id': message_template_id or '',
+                    'notify_room_id': notify_room_id or '',
                     'is_active': is_active,
                     'retry_limit': retry_limit,
                 }
@@ -1046,7 +1250,7 @@ def dynamic_flex_builder_submit(
             q = get_query_by_id(db, int(approved_query_id))
             if q:
                 data = preview_query(q.sql_text, max_rows=min(q.max_rows or 20, 20))
-                rows = enrich_alert_rows(db, data.get('rows') or [], str(request.base_url).rstrip('/'))
+                rows = enrich_alert_rows(db, data.get('rows') or [], _public_base_url(request))
         fields = get_available_fields(rows)
         preview_payload = build_dynamic_template_payload('flex_dynamic', flex_json, alt_text, rows)
         preview_json = json.dumps(preview_payload, ensure_ascii=False, indent=2)
@@ -1058,17 +1262,112 @@ def dynamic_flex_builder_submit(
         return templates.TemplateResponse('admin/dynamic_flex_builder.html', ctx(request, db, session, form_error=str(exc), form_values=form_values, preview_json=preview_json, fields=fields), status_code=400)
 
 
-@router.get('/alerts/cases')
-def alert_cases_page(request:Request, db:Session=Depends(get_db)):
+
+
+@router.get('/settings/claim-notify')
+def claim_notify_settings_page(request:Request, db:Session=Depends(get_db)):
     session=require_session(request)
-    require_menu(db, session, 'notify')
-    return templates.TemplateResponse('admin/alert_cases.html', ctx(
+    require_menu(db, session, 'claim_notify_settings')
+    return templates.TemplateResponse('admin/claim_notify_settings.html', ctx(
         request, db, session,
-        alert_cases=get_alert_cases(db)
+        claim_notify_enabled=(os.getenv('CLAIM_NOTIFY_ENABLED', 'Y') or 'Y'),
+        notify_rooms=get_notify_rooms(db),
+        active_notify_rooms=get_active_notify_rooms(db),
     ))
 
+@router.get('/alerts/cases')
+def alert_cases_page(request:Request, status_filter:str='', db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify')
+    cases = get_alert_cases(db)
+    if status_filter:
+        cases = [x for x in cases if (x.status or '') == status_filter]
+    rows = _alert_case_report_rows(cases)
+    dashboard = _alert_case_dashboard(rows)
+    return templates.TemplateResponse('admin/alert_cases.html', ctx(
+        request, db, session,
+        alert_cases=cases,
+        alert_case_rows=rows,
+        alert_dashboard=dashboard,
+        status_filter=status_filter,
+    ))
+
+@router.get('/alerts/cases/export.csv')
+def alert_cases_export_csv(request:Request, status_filter:str='', db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify')
+    cases = get_alert_cases(db)
+    if status_filter:
+        cases = [x for x in cases if (x.status or '') == status_filter]
+    rows = _alert_case_report_rows(cases)
+    content = to_csv_bytes(rows)
+    filename = f"alert_cases_{bangkok_now_naive().strftime('%Y%m%d_%H%M%S')}.csv"
+    headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+    return Response(content=content, media_type='text/csv; charset=utf-8', headers=headers)
+
+@router.get('/alerts/cases/export.xlsx')
+def alert_cases_export_xlsx(request:Request, status_filter:str='', db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify')
+    cases = get_alert_cases(db)
+    if status_filter:
+        cases = [x for x in cases if (x.status or '') == status_filter]
+    rows = _alert_case_report_rows(cases)
+    content = to_xlsx_bytes(rows, sheet_name='alert_cases')
+    filename = f"alert_cases_{bangkok_now_naive().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+    return Response(content=content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
+
+
+@router.get('/alerts/cases/{case_id}/edit')
+def alert_case_edit_page(case_id:int, request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify')
+    case = get_alert_case_by_id(db, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail='case not found')
+    return templates.TemplateResponse('admin/alert_case_edit.html', ctx(
+        request, db, session,
+        alert_case=case
+    ))
+
+@router.post('/alerts/cases/{case_id}/edit')
+def alert_case_edit_submit(case_id:int, request:Request, status_value:str=Form('NEW'), claimed_by:str=Form(''), claimed_at:str=Form(''), db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify')
+    case = get_alert_case_by_id(db, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail='case not found')
+    update_data = {'status': status_value or 'NEW', 'claimed_by': claimed_by.strip() or None}
+    if (claimed_at or '').strip():
+        try:
+            from datetime import datetime
+            update_data['claimed_at'] = datetime.fromisoformat(claimed_at.strip().replace('T', ' '))
+        except Exception:
+            pass
+    update_alert_case(db, case, **update_data)
+    return RedirectResponse('/alerts/cases', status_code=302)
+
+@router.get('/alerts/cases/{case_id}/delete')
+def alert_case_delete(case_id:int, request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'notify')
+    case = get_alert_case_by_id(db, case_id)
+    if case:
+        db.delete(case)
+        db.commit()
+    return RedirectResponse('/alerts/cases', status_code=302)
+
 @router.get('/alerts/claim')
-def alert_claim_page(request:Request, case_key:str, db:Session=Depends(get_db)):
+def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', db:Session=Depends(get_db)):
+    if not verify_claim_signature(case_key, expires, sig):
+        return templates.TemplateResponse('public/claim_case.html', {
+            'request': request,
+            'case': None,
+            'error': 'ลิงก์รับเคสไม่ถูกต้องหรือหมดอายุ',
+            'success': False,
+            'redirect_line': True,
+        }, status_code=400)
     case = get_alert_case_by_key(db, case_key)
     if not case:
         raise HTTPException(status_code=404, detail='case not found')
@@ -1077,10 +1376,19 @@ def alert_claim_page(request:Request, case_key:str, db:Session=Depends(get_db)):
         'case': case,
         'error': None,
         'success': False,
+        'redirect_line': False,
     })
 
 @router.post('/alerts/claim')
-def alert_claim_submit(request:Request, case_key:str=Form(...), receiver_name:str=Form(''), db:Session=Depends(get_db)):
+def alert_claim_submit(request:Request, case_key:str=Form(...), expires:str=Form(''), sig:str=Form(''), receiver_name:str=Form(''), db:Session=Depends(get_db)):
+    if not verify_claim_signature(case_key, expires, sig):
+        return templates.TemplateResponse('public/claim_case.html', {
+            'request': request,
+            'case': None,
+            'error': 'ลิงก์รับเคสไม่ถูกต้องหรือหมดอายุ',
+            'success': False,
+            'redirect_line': True,
+        }, status_code=400)
     case = get_alert_case_by_key(db, case_key)
     if not case:
         raise HTTPException(status_code=404, detail='case not found')
@@ -1090,6 +1398,7 @@ def alert_claim_submit(request:Request, case_key:str=Form(...), receiver_name:st
             'case': case,
             'error': 'เคสนี้มีผู้รับเคสแล้ว',
             'success': False,
+            'redirect_line': False,
         })
     session = get_current_session(request)
     receiver = (session.get('username') if session else '') or receiver_name.strip()
@@ -1099,13 +1408,33 @@ def alert_claim_submit(request:Request, case_key:str=Form(...), receiver_name:st
             'case': case,
             'error': 'กรุณาระบุชื่อผู้รับเคส',
             'success': False,
+            'redirect_line': False,
         })
     claim_case(db, case, receiver)
+    refreshed_case = get_alert_case_by_key(db, case_key) or case
+    claim_notify_error = None
+    try:
+        notify_case_claimed(db, receiver, refreshed_case)
+        if hasattr(refreshed_case, 'claim_notify_status'):
+            refreshed_case.claim_notify_status = 'success'
+            refreshed_case.claim_notify_sent_at = utcnow()
+            refreshed_case.claim_notify_detail = None
+            db.commit()
+    except Exception as exc:
+        claim_notify_error = str(exc)
+        try:
+            if hasattr(refreshed_case, 'claim_notify_status'):
+                refreshed_case.claim_notify_status = 'failed'
+                refreshed_case.claim_notify_detail = str(exc)[:1000]
+                db.commit()
+        except Exception:
+            db.rollback()
     return templates.TemplateResponse('public/claim_case.html', {
         'request': request,
-        'case': case,
-        'error': None,
+        'case': refreshed_case,
+        'error': None if not claim_notify_error else f'รับเคสสำเร็จ แต่แจ้งเตือนหลังรับเคสไม่สำเร็จ: {claim_notify_error}',
         'success': True,
+        'redirect_line': False,
     })
 
 
@@ -1171,3 +1500,17 @@ def logout(request:Request, db:Session=Depends(get_db)):
     response.delete_cookie(settings.session_cookie_name, path='/')
     response.delete_cookie(settings.csrf_cookie_name, path='/')
     return response
+
+
+@router.get('/alerts/manual-claim')
+def manual_claim_page(request:Request, db:Session=Depends(get_db)):
+    session = require_session(request)
+    require_menu(db, session, 'notify')
+    try:
+        cases = list_open_alert_cases(db)
+    except Exception:
+        cases = []
+    return templates.TemplateResponse(
+        'admin/manual_claim.html',
+        ctx(request, db, session, alert_cases=cases)
+    )

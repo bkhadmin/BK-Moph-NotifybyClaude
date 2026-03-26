@@ -8,8 +8,9 @@ class Settings(BaseSettings):
     app_debug:bool=False
     app_secret_key:str='change-me'
     app_url:str='http://127.0.0.1:8012'
+    public_base_url:str=''
     allowed_origins:str='http://127.0.0.1:8012'
-    trusted_hosts:str='127.0.0.1,localhost,app,app:8000,nginx,bk_app'
+    trusted_hosts:str='127.0.0.1,localhost,app,app:8000,nginx,bk_app,bkalert.bkhospital.go.th'
     session_cookie_name:str='bk_notify_session'
     session_expire_hours:int=12
     session_cookie_secure:bool=False
@@ -34,6 +35,10 @@ class Settings(BaseSettings):
     max_upload_mb:int=5
 
     provider_login_enabled:bool=True
+    sso_enabled:bool=True
+    sso_jwt_secret:str=''
+    sso_app_id:str='app-moph-notify'
+    providerlogin_url:str='http://localhost:3000'
     health_id_base_url:str='https://moph.id.th'
     health_id_client_id:str=''
     health_id_client_secret:str=''

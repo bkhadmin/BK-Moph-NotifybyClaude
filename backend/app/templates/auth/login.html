@@ -11,8 +11,14 @@
       <input type="password" name="password" placeholder="Password" class="input">
       <button type="submit" class="btn">Login</button>
     </form>
-    <div class="mt-4">
-      <a href="/auth/provider/login">Login with Provider ID</a>
+    <div class="mt-4 stack">
+      {% if sso_enabled %}
+      <a href="{{ providerlogin_url }}" class="btn" style="background:#d97706;border-color:#d97706;text-align:center">
+        🏥 เข้าสู่ระบบผ่านระบบกลาง (SSO)
+      </a>
+      <div class="muted" style="text-align:center;font-size:.8rem">หรือ</div>
+      {% endif %}
+      <a href="/auth/provider/login">Login with Provider ID (Health ID)</a>
       {% if not provider_login_enabled %}
       <div class="muted mt-3">Provider login scaffold mode</div>
       {% endif %}

@@ -1,74 +1,53 @@
-from __future__ import annotations
 from datetime import datetime, timedelta
-import re
-from croniter import croniter
-from app.utils.thai_datetime import bangkok_now_naive
 
-def _normalize_time_only(value:str) -> str:
-    value = (value or "").strip().replace(".", ":")
-    if re.fullmatch(r"\d{1,2}:\d{2}", value):
-        return value
-    raise ValueError("รูปแบบเวลาไม่ถูกต้อง ใช้เช่น 17:00 หรือ 17.00")
+def _normalize_daily_time(value):
+    raw = (value or "").strip()
+    if "." in raw and ":" not in raw:
+        raw = raw.replace(".", ":")
+    if raw and ":" in raw:
+        hh, mm = raw.split(":", 1)
+        return f"{int(hh):02d}:{int(mm):02d}"
+    return raw
 
-def _parse_once(value:str) -> datetime:
-    value = (value or "").strip().replace("T", " ")
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            pass
-    raise ValueError("กำหนดการแบบครั้งเดียว ต้องใช้วันเวลาเต็ม เช่น 2026-03-17 17:00 หรือ 2026-03-17T17:00:00")
-
-def _parse_daily(value:str, base:datetime) -> datetime:
-    hhmm = _normalize_time_only(value)
-    hh, mm = [int(x) for x in hhmm.split(":")]
-    run_at = base.replace(hour=hh, minute=mm, second=0, microsecond=0)
-    if run_at <= base:
-        run_at += timedelta(days=1)
-    return run_at
-
-def scheduler_now() -> datetime:
-    return bangkok_now_naive()
-
-def parse_next_run(schedule_type:str, cron_value:str|None, interval_minutes:int|None, base:datetime|None=None) -> datetime|None:
-    base = base or scheduler_now()
+def parse_next_run(schedule_type, cron_value=None, interval_minutes=None, base=None):
+    base = base or datetime.now()
     st = (schedule_type or "").strip().lower()
 
-    if st == "once":
+    if st in ("once", "run_once"):
         if not cron_value:
-            raise ValueError("กรุณาระบุวันเวลาแบบครั้งเดียว")
-        return _parse_once(cron_value)
+            return base
+        raw = str(cron_value).strip().replace("T", " ")
+        return datetime.fromisoformat(raw)
 
-    if st == "daily":
-        if not cron_value:
-            raise ValueError("กรุณาระบุเวลา เช่น 17:00")
-        return _parse_daily(cron_value, base)
+    if st in ("interval", "every_minutes", "interval_minutes"):
+        minutes = int(interval_minutes or cron_value or 5)
+        return base + timedelta(minutes=minutes)
 
-    if st == "interval":
-        if not interval_minutes or int(interval_minutes) <= 0:
-            raise ValueError("interval_minutes ต้องมากกว่า 0")
-        return base + timedelta(minutes=int(interval_minutes))
+    if st in ("daily", "daily_time", "every_day_time"):
+        raw = _normalize_daily_time(cron_value)
+        if not raw or ":" not in raw:
+            return base + timedelta(days=1)
+        hh, mm = raw.split(":", 1)
+        candidate = base.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
+        if candidate <= base:
+            candidate = candidate + timedelta(days=1)
+        return candidate
 
-    if st == "cron":
-        if not cron_value:
-            raise ValueError("กรุณาระบุ cron expression")
-        return croniter(cron_value, base).get_next(datetime)
+    if st in ("hourly",):
+        return base.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
 
-    raise ValueError("schedule_type ไม่ถูกต้อง")
+    if st in ("monthly",):
+        return base + timedelta(days=30)
 
-def compute_following_next_run(schedule_type:str, cron_value:str|None, interval_minutes:int|None, last_base:datetime|None=None):
-    base = last_base or scheduler_now()
-    st = (schedule_type or "").strip().lower()
-    if st == "once":
-        return None
-    if st == "daily":
-        return base + timedelta(days=1)
-    if st == "interval":
-        if not interval_minutes or int(interval_minutes) <= 0:
-            return None
-        return base + timedelta(minutes=int(interval_minutes))
-    if st == "cron":
-        if not cron_value:
-            return None
-        return croniter(cron_value, base).get_next(datetime)
-    return None
+    return base + timedelta(minutes=int(interval_minutes or 5))
+
+def compute_following_next_run(job, base=None):
+    return parse_next_run(
+        getattr(job, "schedule_type", None),
+        getattr(job, "cron_value", None),
+        getattr(job, "interval_minutes", None),
+        base=base or datetime.now(),
+    )
+
+def scheduler_now():
+    return datetime.now()

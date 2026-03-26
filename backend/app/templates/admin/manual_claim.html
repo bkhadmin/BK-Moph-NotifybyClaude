@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Manual Claim Cases</h1>
+    <div class="muted">กรณีปุ่มในข้อความมีปัญหา ยังสามารถเข้ามารับเคสจากหน้านี้ได้</div>
+  </div>
+</div>
+
+<div class="card mt-6">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Patient</th>
+        <th>HN</th>
+        <th>Item</th>
+        <th>Value</th>
+        <th>Department</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in alert_cases or [] %}
+      <tr>
+        <td>{{ c.patient_name or c.ptname or '-' }}</td>
+        <td>{{ c.patient_hn or c.hn or '-' }}</td>
+        <td>{{ c.item_name or c.lab_items_name or '-' }}</td>
+        <td>{{ c.item_value or c.lab_order_result or '-' }}</td>
+        <td>{{ c.department or c.cur_dep or '-' }}</td>
+        <td>{{ c.claim_status or 'open' }}</td>
+        <td>
+          {% if c.case_key %}
+          <a class="btn" href="/alerts/claim?case_key={{ c.case_key }}">รับเคส</a>
+          {% else %}
+          <span class="muted">ไม่มี case key</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted">No open cases</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

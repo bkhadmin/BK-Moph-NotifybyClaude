@@ -1,8 +1,28 @@
 {% extends "base.html" %}
+{% macro dt(v) -%}
+{{ v.strftime('%d/%m/%Y %H:%M:%S') if v else '-' }}
+{%- endmacro %}
 {% block body %}
 <div class="page-header">
-  <h1 class="page-title">Alert Cases</h1>
-  <div class="muted">เคสจาก LAB วิกฤต/การแจ้งเตือนที่ถูกสร้างและสถานะการรับเคส</div>
+  <div>
+    <h1 class="page-title">Alert Cases Dashboard</h1>
+    <div class="muted">ติดตามว่าใครรับเคสเมื่อไร ข้อความถูกส่งเมื่อไร และใช้เวลากี่นาทีในการรับเคส</div>
+  </div>
+  <div class="page-actions">
+    <a class="btn secondary" href="/alerts/cases">All</a>
+    <a class="btn secondary" href="/alerts/cases?status_filter=NEW">Pending</a>
+    <a class="btn secondary" href="/alerts/cases?status_filter=CLAIMED">Claimed</a>
+    <a class="btn" href="/alerts/cases/export.csv{% if status_filter %}?status_filter={{ status_filter }}{% endif %}">Export CSV</a>
+    <a class="btn" href="/alerts/cases/export.xlsx{% if status_filter %}?status_filter={{ status_filter }}{% endif %}">Export Excel</a>
+  </div>
+</div>
+
+<div class="stat-grid mt-6">
+  <div class="stat-card"><div class="stat-label">Total Cases</div><div class="stat-value">{{ alert_dashboard.total_cases }}</div></div>
+  <div class="stat-card success"><div class="stat-label">Claimed Cases</div><div class="stat-value">{{ alert_dashboard.claimed_cases }}</div></div>
+  <div class="stat-card warning"><div class="stat-label">Pending Cases</div><div class="stat-value">{{ alert_dashboard.pending_cases }}</div></div>
+  <div class="stat-card danger"><div class="stat-label">Avg. Claim (min)</div><div class="stat-value">{{ alert_dashboard.avg_claim_minutes }}</div></div>
+  <div class="stat-card success"><div class="stat-label">Claim Notify Success</div><div class="stat-value">{{ alert_dashboard.claim_notify_success }}</div></div>
 </div>
 
 <div class="card mt-6">
@@ -16,27 +36,42 @@
         <th>Value</th>
         <th>Department</th>
         <th>Reported</th>
+        <th>Message Sent At</th>
         <th>Claimed By</th>
         <th>Claimed At</th>
-        <th>Sent</th>
+        <th>Minutes to Claim</th>
+        <th>Sent Count</th>
+        <th>Claim Notify</th>
+        <th>Claim Notify Sent At</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      {% for c in alert_cases %}
+      {% for r in alert_case_rows %}
       <tr>
-        <td>{{ c.status }}</td>
-        <td>{{ c.patient_hn or '-' }}</td>
-        <td>{{ c.patient_name or '-' }}</td>
-        <td>{{ c.item_name or '-' }}</td>
-        <td>{{ c.item_value or '-' }}</td>
-        <td>{{ c.department or '-' }}</td>
-        <td>{{ c.report_date_text or '-' }} {{ c.report_time_text or '' }}</td>
-        <td>{{ c.claimed_by or '-' }}</td>
-        <td>{{ c.claimed_at or '-' }}</td>
-        <td>{{ c.sent_count or 0 }}</td>
+        <td><span class="badge {% if r.status == 'CLAIMED' %}success{% else %}danger{% endif %}">{{ r.status }}</span></td>
+        <td>{{ r.patient_hn or '-' }}</td>
+        <td>{{ r.patient_name or '-' }}</td>
+        <td>{{ r.item_name or '-' }}</td>
+        <td>{{ r.item_value or '-' }}</td>
+        <td>{{ r.department or '-' }}</td>
+        <td>{{ r.report_date or '-' }} {{ r.report_time or '' }}</td>
+        <td>{{ r.last_sent_at or '-' }}</td>
+        <td>{{ r.claimed_by or '-' }}</td>
+        <td>{{ r.claimed_at or '-' }}</td>
+        <td>{{ r.minutes_to_claim or '-' }}</td>
+        <td>{{ r.sent_count or 0 }}</td>
+        <td>{{ r.claim_notify_status or '-' }}</td>
+        <td>{{ r.claim_notify_sent_at or '-' }}</td>
+        <td>
+          <div class="page-actions">
+            <a class="btn secondary" href="/alerts/cases/{{ r.id }}/edit">Edit</a>
+            <a class="btn danger" href="/alerts/cases/{{ r.id }}/delete" onclick="return confirm('Delete this alert case?')">Delete</a>
+          </div>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="10" class="muted">No cases</td></tr>
+      <tr><td colspan="15" class="muted">No cases</td></tr>
       {% endfor %}
     </tbody>
   </table>

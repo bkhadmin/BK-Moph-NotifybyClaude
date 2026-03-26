@@ -5,3 +5,5 @@ class Base(DeclarativeBase):
 from app.models.schedule_job_log import ScheduleJobLog
 
 from app.models.alert_case import AlertCase
+
+from app.models.notify_room import NotifyRoom

@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.services.timezone_utils import utcnow
 from sqlalchemy.orm import Session
 from app.models.alert_case import AlertCase
 
@@ -22,7 +23,7 @@ def update_item(db: Session, row: AlertCase, **kwargs):
     for key, value in kwargs.items():
         if hasattr(row, key):
             setattr(row, key, value)
-    row.updated_at = datetime.utcnow()
+    row.updated_at = utcnow()
     db.commit()
     db.refresh(row)
     return row
