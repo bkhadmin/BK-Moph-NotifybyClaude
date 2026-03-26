@@ -1,6 +1,6 @@
 import asyncio
-from datetime import datetime
 from app.db.session import SessionLocal
+from app.services.timezone_write import bangkok_now_naive
 from app.repositories.schedule_jobs import get_due_jobs, mark_ran
 from app.repositories.send_logs import get_failed_or_pending
 from app.services.job_runner import run_job
@@ -10,7 +10,7 @@ async def loop():
     while True:
         db = SessionLocal()
         try:
-            due = get_due_jobs(db, datetime.now())
+            due = get_due_jobs(db, bangkok_now_naive())
             for job in due:
                 result = await run_job(db, job)
                 if result:

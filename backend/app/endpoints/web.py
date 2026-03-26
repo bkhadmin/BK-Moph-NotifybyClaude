@@ -125,7 +125,7 @@ from app.services.dynamic_template_renderer import build_dynamic_template_payloa
 from app.services.dynamic_flex_fields import get_available_fields
 from app.services.alert_case_service import enrich_alert_rows, filter_rows_for_send, mark_rows_sent, claim_case, ensure_tables
 from app.services.claim_security import verify_claim_signature
-from app.services.timezone_utils import format_bangkok, today_bangkok_str, bangkok_now, utcnow
+from app.services.timezone_utils import format_bangkok, today_bangkok_str, bangkok_now
 from app.services.claim_notify_service import notify_case_claimed
 
 def ensure_alert_tables():
@@ -1417,7 +1417,7 @@ def alert_claim_submit(request:Request, case_key:str=Form(...), expires:str=Form
         notify_case_claimed(db, receiver, refreshed_case)
         if hasattr(refreshed_case, 'claim_notify_status'):
             refreshed_case.claim_notify_status = 'success'
-            refreshed_case.claim_notify_sent_at = utcnow()
+            refreshed_case.claim_notify_sent_at = bangkok_now_naive()
             refreshed_case.claim_notify_detail = None
             db.commit()
     except Exception as exc:

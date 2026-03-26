@@ -1,5 +1,4 @@
-from datetime import datetime
-from app.services.timezone_utils import utcnow
+from app.services.timezone_write import bangkok_now_naive
 from sqlalchemy.orm import Session
 from app.models.alert_case import AlertCase
 
@@ -23,7 +22,7 @@ def update_item(db: Session, row: AlertCase, **kwargs):
     for key, value in kwargs.items():
         if hasattr(row, key):
             setattr(row, key, value)
-    row.updated_at = utcnow()
+    row.updated_at = bangkok_now_naive()
     db.commit()
     db.refresh(row)
     return row

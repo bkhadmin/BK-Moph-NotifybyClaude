@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
+from app.services.timezone_write import bangkok_now_naive
 
 def _normalize_daily_time(value):
     raw = (value or "").strip()
@@ -10,7 +11,7 @@ def _normalize_daily_time(value):
     return raw
 
 def parse_next_run(schedule_type, cron_value=None, interval_minutes=None, base=None):
-    base = base or datetime.now()
+    base = base or bangkok_now_naive()
     st = (schedule_type or "").strip().lower()
 
     if st in ("once", "run_once"):
@@ -46,8 +47,8 @@ def compute_following_next_run(job, base=None):
         getattr(job, "schedule_type", None),
         getattr(job, "cron_value", None),
         getattr(job, "interval_minutes", None),
-        base=base or datetime.now(),
+        base=base or bangkok_now_naive(),
     )
 
 def scheduler_now():
-    return datetime.now()
+    return bangkok_now_naive()

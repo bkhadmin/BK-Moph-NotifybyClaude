@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
 from app.models.schedule_job_log import ScheduleJobLog
-from datetime import datetime
+from app.services.timezone_write import bangkok_now_naive
 
 def create_item(db: Session, schedule_job_id:int, status:str, rows_returned:int|None=None, sent_count:int|None=None, error_message:str|None=None, detail_json:str|None=None):
     row = ScheduleJobLog(
         schedule_job_id=schedule_job_id,
-        run_at=datetime.utcnow(),
+        run_at=bangkok_now_naive(),
         status=status,
         rows_returned=rows_returned,
         sent_count=sent_count,

@@ -1,5 +1,5 @@
-from datetime import datetime
 from sqlalchemy.orm import Session
+from app.services.timezone_write import bangkok_now_naive
 from app.repositories.approved_queries import get_by_id as get_query_by_id
 from app.repositories.message_templates import get_by_id as get_template_by_id
 from app.services.hosxp_query import preview_query
@@ -15,6 +15,6 @@ async def run_job(db:Session, job):
     data = preview_query(q.sql_text, max_rows=q.max_rows)
     messages = [build_message_payload(t.template_type, t.content, t.alt_text, row) for row in data['rows']]
     await send_with_log(db, 'scheduler', messages, f'job_id={job.id}')
-    last_run = datetime.now()
+    last_run = bangkok_now_naive()
     next_run = next_after_run(job.schedule_type, job.cron_value, job.interval_minutes, last_run)
     return {"next_run_at": next_run, "last_run_at": last_run}

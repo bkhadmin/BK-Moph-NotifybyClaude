@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime
 from app.db.base import Base
-from app.services.timezone_utils import utcnow
+from app.services.timezone_write import bangkok_now_naive
 
 class NotifyRoom(Base):
     __tablename__ = "notify_rooms"
@@ -11,5 +11,5 @@ class NotifyRoom(Base):
     secret_key = Column(Text, nullable=False)
     is_active = Column(String(1), nullable=False, default="Y")
     note = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=utcnow)
-    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at = Column(DateTime, default=bangkok_now_naive)
+    updated_at = Column(DateTime, default=bangkok_now_naive, onupdate=bangkok_now_naive)
