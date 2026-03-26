@@ -35,6 +35,8 @@ def verify_sso_token(token: str) -> dict:
             token,
             settings.sso_jwt_secret,
             algorithms=['HS256'],
+            audience='web-apps',
+            issuer='providerlogin',
             leeway=15,
         )
     except jwt.ExpiredSignatureError:
@@ -42,10 +44,6 @@ def verify_sso_token(token: str) -> dict:
     except jwt.InvalidTokenError as e:
         raise SSOError(f'SSO token ไม่ถูกต้อง: {e}')
 
-    if payload.get('iss') != 'providerlogin':
-        raise SSOError('SSO token: issuer ไม่ถูกต้อง')
-    if payload.get('aud') != 'web-apps':
-        raise SSOError('SSO token: audience ไม่ถูกต้อง')
     if payload.get('appId') != settings.sso_app_id:
         raise SSOError('SSO token: appId ไม่ตรงกับระบบนี้')
     if payload.get('scope') != 'app-access':
