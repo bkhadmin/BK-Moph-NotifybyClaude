@@ -1,9 +1,15 @@
+from app.services.timezone_utils import thai_date_str as _thai_date_str
+
 def _get_field(row: dict, field_map: dict, standard_name: str, fallback: str = "") -> str:
     col = field_map.get(standard_name, "")
     val = row.get(col, "") if col else ""
     if not val:
         val = row.get(standard_name, fallback)
     return str(val) if val else fallback
+
+def _fmt_date(value: str) -> str:
+    """Convert date string to Thai Buddhist Era format for LINE bubbles."""
+    return _thai_date_str(value) if value else ""
 
 
 def build_claim_alert_carousel(rows: list, cfg: dict) -> list:
@@ -45,7 +51,7 @@ def build_claim_alert_carousel(rows: list, cfg: dict) -> list:
                               "margin": "md", "wrap": True})
         if report_date:
             contents.append({"type": "text",
-                              "text": f"วันที่ {report_date}" + (f" เวลา {report_time}" if report_time else ""),
+                              "text": f"วันที่ {_fmt_date(report_date)}" + (f" เวลา {report_time}" if report_time else ""),
                               "size": "xs", "color": "#64748b", "margin": "sm", "wrap": True})
         if doctor:
             contents.append({"type": "text", "text": f"แพทย์ผู้สั่ง {doctor}",
