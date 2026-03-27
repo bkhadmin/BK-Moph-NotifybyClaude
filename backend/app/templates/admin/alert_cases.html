@@ -156,7 +156,7 @@
         <td style="font-weight:600;">{{ r.item_name or '-' }}</td>
         <td style="font-weight:700;color:#dc2626;">{{ r.item_value or '-' }}</td>
         <td>{{ r.department or '-' }}</td>
-        <td style="white-space:nowrap;font-size:.85rem;">{{ r.report_date or '-' }} {{ r.report_time or '' }}</td>
+        <td style="white-space:nowrap;font-size:.85rem;">{{ r.report_date|thaidatestr if r.report_date else '-' }} {{ r.report_time or '' }}</td>
         <td style="white-space:nowrap;font-size:.85rem;">{{ r.last_sent_at or '-' }}</td>
         <td>{{ r.claimed_by or '-' }}</td>
         <td style="white-space:nowrap;font-size:.85rem;">{{ r.claimed_at or '-' }}</td>

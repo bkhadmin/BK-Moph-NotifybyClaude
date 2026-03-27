@@ -154,7 +154,7 @@
     {% if case.report_date_text %}
     <div class="info-row">
       <span class="info-label">วันที่</span>
-      <span class="info-value">{{ case.report_date_text }}{% if case.report_time_text %} {{ case.report_time_text }}{% endif %}</span>
+      <span class="info-value">{{ case.report_date_text|thaidatestr }}{% if case.report_time_text %} {{ case.report_time_text }}{% endif %}</span>
     </div>
     {% endif %}
     <div class="info-row">

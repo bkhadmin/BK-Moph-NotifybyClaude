@@ -180,9 +180,10 @@ def _public_base_url(request: Request) -> str:
 
 router=APIRouter()
 templates=Jinja2Templates(directory='app/templates')
-from app.services.timezone_utils import format_thai_datetime, format_thai_date
+from app.services.timezone_utils import format_thai_datetime, format_thai_date, thai_date_str
 templates.env.filters['thaidt'] = format_thai_datetime
 templates.env.filters['thaidate'] = format_thai_date
+templates.env.filters['thaidatestr'] = thai_date_str
 
 
 

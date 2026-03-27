@@ -55,3 +55,21 @@ def format_thai_datetime(dt, show_time=True):
 
 def format_thai_date(dt):
     return format_thai_datetime(dt, show_time=False)
+
+def thai_date_str(value: str) -> str:
+    """Convert a date string (DD/MM/YYYY or YYYY-MM-DD) to Thai Buddhist Era format.
+    e.g. '18/03/2026' → '18 มี.ค. 2569'
+         '2026-03-18' → '18 มี.ค. 2569'
+    Returns original value if it cannot be parsed.
+    """
+    if not value:
+        return value or "-"
+    s = str(value).strip()
+    from datetime import datetime as _dt
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            d = _dt.strptime(s, fmt)
+            return f"{d.day} {_THAI_MONTHS_SHORT[d.month]} {d.year + 543}"
+        except ValueError:
+            continue
+    return s
