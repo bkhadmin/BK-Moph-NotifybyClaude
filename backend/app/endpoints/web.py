@@ -29,6 +29,7 @@ def _alert_case_report_rows(cases):
         rows.append({
             'id': c.id,
             'case_key': c.case_key,
+            'alert_type': c.alert_type or '',
             'status': c.status,
             'patient_hn': c.patient_hn or '',
             'patient_name': c.patient_name or '',
@@ -42,7 +43,6 @@ def _alert_case_report_rows(cases):
             'claimed_at': _fmt_dt(c.claimed_at),
             'minutes_to_claim': receive_minutes if receive_minutes is not None else '',
             'sent_count': c.sent_count or 0,
-            'id': _fmt_dt(c.id),
             'claim_notify_sent_at': _fmt_dt(getattr(c, 'claim_notify_sent_at', None)),
             'claim_notify_status': getattr(c, 'claim_notify_status', '') or '',
         })
@@ -56,6 +56,17 @@ def _alert_case_dashboard(rows):
     with_claim_minutes = [float(r['minutes_to_claim']) for r in rows if str(r.get('minutes_to_claim')).strip() not in ('', 'None')]
     avg_claim_minutes = round(sum(with_claim_minutes) / len(with_claim_minutes), 2) if with_claim_minutes else 0
     claimed_today = len([r for r in rows if r.get('claimed_at') and r['claimed_at'][:10] == today_bangkok_str()])
+    # breakdown by alert_type
+    type_counts = {}
+    for r in rows:
+        t = r.get('alert_type') or 'unknown'
+        if t not in type_counts:
+            type_counts[t] = {'total': 0, 'claimed': 0, 'pending': 0}
+        type_counts[t]['total'] += 1
+        if r.get('status') == 'CLAIMED':
+            type_counts[t]['claimed'] += 1
+        else:
+            type_counts[t]['pending'] += 1
     return {
         'total_cases': total,
         'claimed_cases': claimed,
@@ -64,6 +75,7 @@ def _alert_case_dashboard(rows):
         'avg_claim_minutes': avg_claim_minutes,
         'claimed_today': claimed_today,
         'claim_notify_success': len([r for r in rows if (r.get('claim_notify_status') or '').lower() == 'success']),
+        'type_counts': type_counts,
     }
 
 from io import BytesIO
@@ -1296,45 +1308,57 @@ def claim_notify_settings_page(request:Request, db:Session=Depends(get_db)):
     ))
 
 @router.get('/alerts/cases')
-def alert_cases_page(request:Request, status_filter:str='', db:Session=Depends(get_db)):
+def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:str='', db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     cases = get_alert_cases(db)
     if status_filter:
         cases = [x for x in cases if (x.status or '') == status_filter]
+    if alert_type_filter:
+        cases = [x for x in cases if (x.alert_type or '') == alert_type_filter]
     rows = _alert_case_report_rows(cases)
-    dashboard = _alert_case_dashboard(rows)
+    all_cases = get_alert_cases(db)
+    all_rows = _alert_case_report_rows(all_cases)
+    dashboard = _alert_case_dashboard(all_rows)
+    alert_types = sorted({r.get('alert_type') for r in all_rows if r.get('alert_type')})
     return templates.TemplateResponse('admin/alert_cases.html', ctx(
         request, db, session,
-        alert_cases=cases,
         alert_case_rows=rows,
         alert_dashboard=dashboard,
         status_filter=status_filter,
+        alert_type_filter=alert_type_filter,
+        alert_types=alert_types,
     ))
 
 @router.get('/alerts/cases/export.csv')
-def alert_cases_export_csv(request:Request, status_filter:str='', db:Session=Depends(get_db)):
+def alert_cases_export_csv(request:Request, status_filter:str='', alert_type_filter:str='', db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     cases = get_alert_cases(db)
     if status_filter:
         cases = [x for x in cases if (x.status or '') == status_filter]
+    if alert_type_filter:
+        cases = [x for x in cases if (x.alert_type or '') == alert_type_filter]
     rows = _alert_case_report_rows(cases)
     content = to_csv_bytes(rows)
-    filename = f"alert_cases_{bangkok_now_naive().strftime('%Y%m%d_%H%M%S')}.csv"
+    suffix = f"_{alert_type_filter}" if alert_type_filter else ""
+    filename = f"alert_cases{suffix}_{bangkok_now_naive().strftime('%Y%m%d_%H%M%S')}.csv"
     headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
     return Response(content=content, media_type='text/csv; charset=utf-8', headers=headers)
 
 @router.get('/alerts/cases/export.xlsx')
-def alert_cases_export_xlsx(request:Request, status_filter:str='', db:Session=Depends(get_db)):
+def alert_cases_export_xlsx(request:Request, status_filter:str='', alert_type_filter:str='', db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     cases = get_alert_cases(db)
     if status_filter:
         cases = [x for x in cases if (x.status or '') == status_filter]
+    if alert_type_filter:
+        cases = [x for x in cases if (x.alert_type or '') == alert_type_filter]
     rows = _alert_case_report_rows(cases)
+    suffix = f"_{alert_type_filter}" if alert_type_filter else ""
     content = to_xlsx_bytes(rows, sheet_name='alert_cases')
-    filename = f"alert_cases_{bangkok_now_naive().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"alert_cases{suffix}_{bangkok_now_naive().strftime('%Y%m%d_%H%M%S')}.xlsx"
     headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
     return Response(content=content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
 
