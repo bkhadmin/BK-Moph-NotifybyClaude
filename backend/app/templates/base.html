@@ -20,10 +20,11 @@
       {% if menus.templates %}<a href="/templates">Templates</a>{% endif %}
       {% if menus.media %}<a href="/media">Media Library</a>{% endif %}
       {% if menus.notify %}<a href="/notify/test">MOPH Notify</a>{% endif %}
-      {% if menus.notify_rooms or menus.notify %}<a href="/notify/rooms">Notify Rooms</a>{% endif %}
+      {% if menus.notify_rooms %}<a href="/notify/rooms">Notify Rooms</a>{% endif %}
+      {% if menus.alert_type_configs %}<a href="/alert-type-configs">Alert Type Configs</a>{% endif %}
       {% if menus.notify %}<a href="/alerts/cases">Alert Cases</a>{% endif %}
       {% if menus.notify %}<a href="/alerts/manual-claim">Manual Claim</a>{% endif %}
-      {% if menus.claim_notify_settings or menus.notify %}<a href="/settings/claim-notify">Claim Notify</a>{% endif %}
+      {% if menus.claim_notify_settings %}<a href="/settings/claim-notify">Claim Notify</a>{% endif %}
       {% if menus.schedules %}<a href="/schedules">Schedules</a>{% endif %}
       {% if menus.logs %}<a href="/logs/access">Logs</a>{% endif %}
       {% if menus.logs %}<a href="/system/connections">Connections</a>{% endif %}

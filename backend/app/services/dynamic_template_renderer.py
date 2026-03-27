@@ -3,12 +3,18 @@ import json
 from app.services.flex_table_renderer import build_full_table_flex
 from app.services.flex_transform import as_flex_message_payload
 from app.services.dynamic_flex_fields import render_dynamic_flex_content
-from app.services.lab_alert_renderer import build_lab_alert_carousel
+from app.services.lab_alert_renderer import build_lab_alert_carousel, build_claim_alert_carousel
 
-def build_dynamic_template_payload(template_type:str, content:str, alt_text:str|None, rows:list[dict]):
+def build_dynamic_template_payload(template_type:str, content:str, alt_text:str|None, rows:list[dict], alert_cfg:dict|None=None):
+    from app.services.lab_alert_renderer import build_claim_alert_carousel, _default_lab_critical_cfg
     tt = (template_type or "").strip().lower()
     if tt == "lab_critical_claim":
-        return build_lab_alert_carousel(rows or [])
+        cfg = alert_cfg or _default_lab_critical_cfg()
+        return build_claim_alert_carousel(rows or [], cfg)
+    if tt == "claim_alert":
+        if not alert_cfg:
+            return None
+        return build_claim_alert_carousel(rows or [], alert_cfg)
 
     if tt in ("flex_full_list", "dynamic_full_list"):
         try:

@@ -47,13 +47,16 @@
 <div class="card mt-6">
   <h3>Approved Query List</h3>
   {% for q in queries %}
-    <div class="item">
+    <div class="item" id="query-{{ q.id }}">
       <div class="item-row">
         <div>
           <strong>{{ q.name }}</strong>
           <div class="muted">max_rows={{ q.max_rows }}</div>
         </div>
         <div class="page-actions">
+          <form method="post" action="/queries/{{ q.id }}/run">
+            <button class="btn">▶ Run</button>
+          </form>
           <a href="/queries?edit_id={{ q.id }}" class="btn secondary">Edit</a>
           <form method="post" action="/queries/{{ q.id }}/delete" onsubmit="return confirm('Delete this query?')">
             <button class="btn danger">Delete</button>
@@ -64,6 +67,16 @@
         <summary>SQL</summary>
         <pre>{{ q.sql_text }}</pre>
       </details>
+      {% if run_query_id is defined and run_query_id == q.id %}
+        {% if error %}
+          <div class="alert error mt-3">{{ error }}</div>
+        {% elif preview %}
+          <div class="mt-3">
+            <div class="muted">▶ Result — {{ preview.row_count }} rows</div>
+            <div class="json-box mt-2"><pre>{{ pretty_json(preview.rows) }}</pre></div>
+          </div>
+        {% endif %}
+      {% endif %}
     </div>
   {% else %}<div class="muted">No approved queries</div>{% endfor %}
 </div>

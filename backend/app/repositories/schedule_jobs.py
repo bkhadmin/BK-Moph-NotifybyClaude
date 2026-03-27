@@ -28,3 +28,6 @@ def update_item(db: Session, row: ScheduleJob, **kwargs):
 def delete_item(db: Session, row: ScheduleJob):
     db.delete(row)
     db.commit()
+
+def mark_ran(db: Session, row: ScheduleJob, next_run_at, last_run_at):
+    return update_item(db, row, next_run_at=next_run_at, last_run_at=last_run_at)

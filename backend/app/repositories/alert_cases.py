@@ -11,6 +11,9 @@ def get_by_id(db: Session, item_id: int):
 def get_by_case_key(db: Session, case_key: str):
     return db.query(AlertCase).filter(AlertCase.case_key == case_key).first()
 
+def get_by_lab_order_number(db: Session, lab_order_number: str):
+    return db.query(AlertCase).filter(AlertCase.lab_order_number == lab_order_number).first()
+
 def create_item(db: Session, **kwargs):
     row = AlertCase(**kwargs)
     db.add(row)

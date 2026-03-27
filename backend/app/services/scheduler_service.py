@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from app.services.timezone_write import bangkok_now_naive
 
 def _normalize_daily_time(value):
@@ -17,7 +17,12 @@ def parse_next_run(schedule_type, cron_value=None, interval_minutes=None, base=N
     if st in ("once", "run_once"):
         if not cron_value:
             return base
-        raw = str(cron_value).strip().replace("T", " ")
+        raw = str(cron_value).strip().replace("T", " ").replace(".", ":")
+        # Time-only input like "17:00" → use base date with that time
+        import re as _re
+        if _re.match(r'^\d{1,2}:\d{2}$', raw):
+            hh, mm = raw.split(":", 1)
+            return base.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
         return datetime.fromisoformat(raw)
 
     if st in ("interval", "every_minutes", "interval_minutes"):
@@ -52,3 +57,6 @@ def compute_following_next_run(job, base=None):
 
 def scheduler_now():
     return bangkok_now_naive()
+
+def next_after_run(schedule_type, cron_value=None, interval_minutes=None, base=None):
+    return parse_next_run(schedule_type, cron_value, interval_minutes, base=base)

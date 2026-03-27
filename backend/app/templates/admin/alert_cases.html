@@ -6,74 +6,103 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Alert Cases Dashboard</h1>
-    <div class="muted">ติดตามว่าใครรับเคสเมื่อไร ข้อความถูกส่งเมื่อไร และใช้เวลากี่นาทีในการรับเคส</div>
+    <div class="muted" style="margin-top:4px;font-size:.92rem;">ติดตามการรับเคสผลแล็บวิกฤต · ว่าใครรับเคสเมื่อไร และใช้เวลากี่นาที</div>
   </div>
   <div class="page-actions">
-    <a class="btn secondary" href="/alerts/cases">All</a>
-    <a class="btn secondary" href="/alerts/cases?status_filter=NEW">Pending</a>
-    <a class="btn secondary" href="/alerts/cases?status_filter=CLAIMED">Claimed</a>
+    <a class="btn secondary" href="/alerts/cases">ทั้งหมด</a>
+    <a class="btn secondary" href="/alerts/cases?status_filter=NEW">รอรับเคส</a>
+    <a class="btn secondary" href="/alerts/cases?status_filter=CLAIMED">รับแล้ว</a>
     <a class="btn" href="/alerts/cases/export.csv{% if status_filter %}?status_filter={{ status_filter }}{% endif %}">Export CSV</a>
     <a class="btn" href="/alerts/cases/export.xlsx{% if status_filter %}?status_filter={{ status_filter }}{% endif %}">Export Excel</a>
   </div>
 </div>
 
 <div class="stat-grid mt-6">
-  <div class="stat-card"><div class="stat-label">Total Cases</div><div class="stat-value">{{ alert_dashboard.total_cases }}</div></div>
-  <div class="stat-card success"><div class="stat-label">Claimed Cases</div><div class="stat-value">{{ alert_dashboard.claimed_cases }}</div></div>
-  <div class="stat-card warning"><div class="stat-label">Pending Cases</div><div class="stat-value">{{ alert_dashboard.pending_cases }}</div></div>
-  <div class="stat-card danger"><div class="stat-label">Avg. Claim (min)</div><div class="stat-value">{{ alert_dashboard.avg_claim_minutes }}</div></div>
-  <div class="stat-card success"><div class="stat-label">Claim Notify Success</div><div class="stat-value">{{ alert_dashboard.claim_notify_success }}</div></div>
+  <div class="stat-card">
+    <div class="stat-label">Total Cases</div>
+    <div class="stat-value">{{ alert_dashboard.total_cases }}</div>
+  </div>
+  <div class="stat-card success">
+    <div class="stat-label">Claimed Cases</div>
+    <div class="stat-value">{{ alert_dashboard.claimed_cases }}</div>
+  </div>
+  <div class="stat-card warning">
+    <div class="stat-label">Pending Cases</div>
+    <div class="stat-value">{{ alert_dashboard.pending_cases }}</div>
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-label">เฉลี่ยเวลารับเคส (นาที)</div>
+    <div class="stat-value">{{ alert_dashboard.avg_claim_minutes }}</div>
+  </div>
+  <div class="stat-card info">
+    <div class="stat-label">Claim Notify ส่งสำเร็จ</div>
+    <div class="stat-value">{{ alert_dashboard.claim_notify_success }}</div>
+  </div>
 </div>
 
 <div class="card mt-6">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+    <div style="font-size:1rem;font-weight:800;color:#1e3a5f;">รายการเคสทั้งหมด</div>
+    {% if status_filter %}
+    <span style="background:#eef2f9;color:#1e3a5f;padding:4px 12px;border-radius:999px;font-size:.82rem;font-weight:700;">
+      กรอง: {{ 'รับแล้ว' if status_filter == 'CLAIMED' else 'รอรับเคส' }}
+    </span>
+    {% endif %}
+  </div>
+  <div class="table-wrap">
   <table class="table">
     <thead>
       <tr>
-        <th>Status</th>
+        <th>สถานะ</th>
         <th>HN</th>
-        <th>Patient</th>
-        <th>Item</th>
-        <th>Value</th>
-        <th>Department</th>
-        <th>Reported</th>
-        <th>Message Sent At</th>
-        <th>Claimed By</th>
-        <th>Claimed At</th>
-        <th>Minutes to Claim</th>
-        <th>Sent Count</th>
+        <th>ชื่อผู้ป่วย</th>
+        <th>รายการ</th>
+        <th>ผลลัพธ์</th>
+        <th>แผนก</th>
+        <th>วันเวลารายงาน</th>
+        <th>ส่งข้อความล่าสุด</th>
+        <th>รับโดย</th>
+        <th>รับเมื่อ</th>
+        <th>เวลารับ (นาที)</th>
+        <th>ส่งทั้งหมด</th>
         <th>Claim Notify</th>
-        <th>Claim Notify Sent At</th>
-        <th>Action</th>
+        <th>Notify ส่งเมื่อ</th>
+        <th>จัดการ</th>
       </tr>
     </thead>
     <tbody>
       {% for r in alert_case_rows %}
       <tr>
-        <td><span class="badge {% if r.status == 'CLAIMED' %}success{% else %}danger{% endif %}">{{ r.status }}</span></td>
-        <td>{{ r.patient_hn or '-' }}</td>
-        <td>{{ r.patient_name or '-' }}</td>
-        <td>{{ r.item_name or '-' }}</td>
-        <td>{{ r.item_value or '-' }}</td>
-        <td>{{ r.department or '-' }}</td>
-        <td>{{ r.report_date or '-' }} {{ r.report_time or '' }}</td>
-        <td>{{ r.last_sent_at or '-' }}</td>
-        <td>{{ r.claimed_by or '-' }}</td>
-        <td>{{ r.claimed_at or '-' }}</td>
-        <td>{{ r.minutes_to_claim or '-' }}</td>
-        <td>{{ r.sent_count or 0 }}</td>
-        <td>{{ r.claim_notify_status or '-' }}</td>
-        <td>{{ r.claim_notify_sent_at or '-' }}</td>
         <td>
-          <div class="page-actions">
-            <a class="btn secondary" href="/alerts/cases/{{ r.id }}/edit">Edit</a>
-            <a class="btn danger" href="/alerts/cases/{{ r.id }}/delete" onclick="return confirm('Delete this alert case?')">Delete</a>
+          <span class="badge {% if r.status == 'CLAIMED' %}success{% else %}danger{% endif %}" style="font-size:.8rem;padding:5px 10px;">
+            {% if r.status == 'CLAIMED' %}รับแล้ว{% else %}รอรับเคส{% endif %}
+          </span>
+        </td>
+        <td style="font-weight:700;color:#1e3a5f;">{{ r.patient_hn or '-' }}</td>
+        <td>{{ r.patient_name or '-' }}</td>
+        <td style="font-weight:600;">{{ r.item_name or '-' }}</td>
+        <td style="font-weight:700;color:#dc2626;">{{ r.item_value or '-' }}</td>
+        <td>{{ r.department or '-' }}</td>
+        <td style="white-space:nowrap;font-size:.85rem;">{{ r.report_date or '-' }} {{ r.report_time or '' }}</td>
+        <td style="white-space:nowrap;font-size:.85rem;">{{ r.last_sent_at or '-' }}</td>
+        <td>{{ r.claimed_by or '-' }}</td>
+        <td style="white-space:nowrap;font-size:.85rem;">{{ r.claimed_at or '-' }}</td>
+        <td style="text-align:center;">{{ r.minutes_to_claim or '-' }}</td>
+        <td style="text-align:center;">{{ r.sent_count or 0 }}</td>
+        <td>{{ r.claim_notify_status or '-' }}</td>
+        <td style="white-space:nowrap;font-size:.85rem;">{{ r.claim_notify_sent_at or '-' }}</td>
+        <td>
+          <div class="page-actions" style="gap:6px;">
+            <a class="btn secondary" href="/alerts/cases/{{ r.id }}/edit" style="padding:6px 12px;font-size:.82rem;">แก้ไข</a>
+            <a class="btn danger" href="/alerts/cases/{{ r.id }}/delete" onclick="return confirm('ยืนยันลบเคสนี้?')" style="padding:6px 12px;font-size:.82rem;">ลบ</a>
           </div>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="15" class="muted">No cases</td></tr>
+      <tr><td colspan="15" class="muted" style="text-align:center;padding:24px;">ไม่มีข้อมูลเคส</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endblock %}

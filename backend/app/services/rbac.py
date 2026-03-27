@@ -12,6 +12,7 @@ MENU_PERMISSIONS = {
     'media': 'menu.media',
     'notify_rooms': 'notify_rooms',
     'claim_notify_settings': 'claim_notify_settings',
+    'alert_type_configs': 'alert_type_configs',
 }
 
 def allowed_menu(db, role_id: int | None, menu_code: str) -> bool:
@@ -27,20 +28,9 @@ def allowed_menu(db, role_id: int | None, menu_code: str) -> bool:
     if required in permission_codes:
         return True
 
-    if menu_code in ('notify_rooms', 'claim_notify_settings') and 'menu.notify' in permission_codes:
-        return True
-
     return False
 
 def enrich_notify_menus(menus, permission_codes, is_superadmin=False):
-    menus["notify_rooms"] = (
-        ("notify_rooms" in permission_codes)
-        or ("menu.notify" in permission_codes)
-        or is_superadmin
-    )
-    menus["claim_notify_settings"] = (
-        ("claim_notify_settings" in permission_codes)
-        or ("menu.notify" in permission_codes)
-        or is_superadmin
-    )
+    menus["notify_rooms"] = is_superadmin or ("notify_rooms" in permission_codes)
+    menus["claim_notify_settings"] = is_superadmin or ("claim_notify_settings" in permission_codes)
     return menus

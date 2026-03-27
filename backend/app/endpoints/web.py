@@ -99,6 +99,7 @@ from app.repositories.delivery_statuses import get_all as get_delivery_statuses
 from app.repositories.provider_profiles import get_all as get_provider_profiles, get_by_id as get_provider_profile_by_id, update_profile_manual
 from app.repositories.provider_profile_histories import get_all_for_profile
 from app.repositories.alert_cases import get_all as get_alert_cases, get_by_case_key as get_alert_case_by_key, get_by_id as get_alert_case_by_id, update_item as update_alert_case
+from app.repositories.alert_type_configs import get_all as get_alert_type_configs, get_by_id as get_alert_type_config_by_id, get_by_code as get_alert_type_config_by_code, create_item as create_alert_type_config, update_item as update_alert_type_config, delete_item as delete_alert_type_config, seed_default_lab_critical
 
 from app.worker_scheduler import run_job_now
 from app.services.rbac import allowed_menu
@@ -144,9 +145,10 @@ templates=Jinja2Templates(directory='app/templates')
 
 def _normalize_schedule_input(schedule_type: str, cron_value: str | None):
     raw = (cron_value or '').strip()
+    # Normalize dot-separator to colon for all types
+    if raw and '.' in raw and ':' not in raw:
+        raw = raw.replace('.', ':')
     if schedule_type in ('daily', 'daily_time', 'every_day_time'):
-        if raw and '.' in raw and ':' not in raw:
-            raw = raw.replace('.', ':')
         if re.match(r'^\d{1,2}:\d{2}$', raw):
             hh, mm = raw.split(':', 1)
             return f"{int(hh):02d}:{mm}"
@@ -205,6 +207,9 @@ def ctx(request:Request, db:Session, session:dict|None, **extra):
         'templates':allowed_menu(db,role_id,'templates'),
         'schedules':allowed_menu(db,role_id,'schedules'),
         'media':allowed_menu(db,role_id,'media'),
+        'notify_rooms':allowed_menu(db,role_id,'notify_rooms'),
+        'claim_notify_settings':allowed_menu(db,role_id,'claim_notify_settings'),
+        'alert_type_configs':allowed_menu(db,role_id,'alert_type_configs'),
     }
     data={'request':request,'session':session,'menus':menus,'pretty_json':pretty_json}
     data.update(extra)
@@ -595,6 +600,21 @@ def preview_query_page(request:Request, sql_text:str=Form(...), max_rows:int=For
     except Exception as exc:
         write_log(db, session.get('username'), client_ip(request), 'query.preview', 'failed', str(exc))
         return templates.TemplateResponse('admin/queries.html', ctx(request, db, session, queries=get_queries(db), preview=None, error=str(exc), hosxp_test=None, edit_row=None))
+
+@router.post('/queries/{query_id}/run')
+def run_saved_query(query_id:int, request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'queries')
+    row = get_query_by_id(db, query_id)
+    if not row:
+        return templates.TemplateResponse('admin/queries.html', ctx(request, db, session, queries=get_queries(db), preview=None, error='Query not found', hosxp_test=None, edit_row=None, run_query_id=None))
+    try:
+        preview = preview_query(row.sql_text, max_rows=row.max_rows)
+        write_log(db, session.get('username'), client_ip(request), 'query.run', 'success', f"id={query_id} rows={preview['row_count']}")
+        return templates.TemplateResponse('admin/queries.html', ctx(request, db, session, queries=get_queries(db), preview=preview, error=None, hosxp_test=None, edit_row=None, run_query_id=query_id))
+    except Exception as exc:
+        write_log(db, session.get('username'), client_ip(request), 'query.run', 'failed', str(exc))
+        return templates.TemplateResponse('admin/queries.html', ctx(request, db, session, queries=get_queries(db), preview=None, error=str(exc), hosxp_test=None, edit_row=None, run_query_id=query_id))
 
 @router.post('/queries/test-connection')
 def query_test_connection(request:Request, db:Session=Depends(get_db)):
@@ -1069,7 +1089,7 @@ def schedules_create(
     session=require_session(request)
     require_menu(db, session, 'schedules')
     try:
-        normalized_cron = (cron_value or '').strip()
+        normalized_cron = _normalize_schedule_input(schedule_type, cron_value)
         normalized_interval = None
         if str(interval_minutes or '').strip() != '':
             normalized_interval = int(str(interval_minutes).strip())
@@ -1490,6 +1510,151 @@ def lab_critical_claim_builder_submit(
             form_values=form_values,
             saved=False
         ), status_code=400)
+
+# ─── Alert Type Configs ───────────────────────────────────────────────────────
+
+def _atc_ctx(request, db, session, edit_row=None, form_error=None, saved=False):
+    return ctx(request, db, session,
+               alert_type_configs=get_alert_type_configs(db),
+               approved_queries=get_queries(db),
+               edit_row=edit_row,
+               form_error=form_error,
+               saved=saved)
+
+@router.get('/alert-type-configs')
+def alert_type_configs_page(request:Request, edit_id:int|None=None, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'alert_type_configs')
+    edit_row = get_alert_type_config_by_id(db, edit_id) if edit_id else None
+    return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, edit_row=edit_row))
+
+@router.post('/alert-type-configs')
+def alert_type_configs_create(
+    request:Request,
+    type_code:str=Form(...),
+    display_name:str=Form(...),
+    bubble_title:str=Form(''),
+    bubble_title_color:str=Form('#b91c1c'),
+    required_fields:str=Form(''),
+    key_fields:str=Form(''),
+    field_map:str=Form(''),
+    is_active:str=Form('Y'),
+    db:Session=Depends(get_db)
+):
+    session=require_session(request)
+    require_menu(db, session, 'alert_type_configs')
+    try:
+        _validate_atc_json(required_fields, key_fields, field_map)
+        create_alert_type_config(db, type_code=type_code.strip(), display_name=display_name.strip(),
+            bubble_title=bubble_title.strip(), bubble_title_color=bubble_title_color.strip(),
+            required_fields=required_fields.strip() or None,
+            key_fields=key_fields.strip() or None,
+            field_map=field_map.strip() or None,
+            is_active=is_active)
+        write_log(db, session.get('username'), client_ip(request), 'alert_type_config.create', 'success', type_code)
+        return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, saved=True))
+    except Exception as exc:
+        return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, form_error=str(exc)))
+
+@router.post('/alert-type-configs/{cfg_id}/update')
+def alert_type_configs_update(
+    cfg_id:int, request:Request,
+    type_code:str=Form(...),
+    display_name:str=Form(...),
+    bubble_title:str=Form(''),
+    bubble_title_color:str=Form('#b91c1c'),
+    required_fields:str=Form(''),
+    key_fields:str=Form(''),
+    field_map:str=Form(''),
+    is_active:str=Form('Y'),
+    db:Session=Depends(get_db)
+):
+    session=require_session(request)
+    require_menu(db, session, 'alert_type_configs')
+    row = get_alert_type_config_by_id(db, cfg_id)
+    if not row:
+        return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, form_error='ไม่พบ config'))
+    try:
+        _validate_atc_json(required_fields, key_fields, field_map)
+        update_alert_type_config(db, row, type_code=type_code.strip(), display_name=display_name.strip(),
+            bubble_title=bubble_title.strip(), bubble_title_color=bubble_title_color.strip(),
+            required_fields=required_fields.strip() or None,
+            key_fields=key_fields.strip() or None,
+            field_map=field_map.strip() or None,
+            is_active=is_active)
+        write_log(db, session.get('username'), client_ip(request), 'alert_type_config.update', 'success', type_code)
+        return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, saved=True))
+    except Exception as exc:
+        return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, edit_row=row, form_error=str(exc)))
+
+@router.post('/alert-type-configs/{cfg_id}/delete')
+def alert_type_configs_delete(cfg_id:int, request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'alert_type_configs')
+    row = get_alert_type_config_by_id(db, cfg_id)
+    if row:
+        delete_alert_type_config(db, row)
+        write_log(db, session.get('username'), client_ip(request), 'alert_type_config.delete', 'success', row.type_code)
+    return RedirectResponse('/alert-type-configs', status_code=302)
+
+@router.post('/alert-type-configs/seed-default')
+def alert_type_configs_seed(request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'alert_type_configs')
+    seed_default_lab_critical(db)
+    write_log(db, session.get('username'), client_ip(request), 'alert_type_config.seed', 'success', 'lab_critical')
+    return RedirectResponse('/alert-type-configs', status_code=302)
+
+@router.get('/templates/claim-alert-builder')
+def claim_alert_builder_page(request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    require_menu(db, session, 'templates')
+    return templates.TemplateResponse('admin/claim_alert_builder.html', ctx(
+        request, db, session,
+        alert_type_configs=get_alert_type_configs(db),
+        approved_queries=get_queries(db),
+        form_error=None, form_values={}, saved=False))
+
+@router.post('/templates/claim-alert-builder')
+def claim_alert_builder_submit(
+    request:Request,
+    template_name:str=Form(''),
+    alert_type_code:str=Form(''),
+    approved_query_id:str=Form(''),
+    db:Session=Depends(get_db)
+):
+    session=require_session(request)
+    require_menu(db, session, 'templates')
+    form_values = {'template_name': template_name, 'alert_type_code': alert_type_code, 'approved_query_id': approved_query_id}
+    try:
+        if not (template_name or '').strip():
+            raise ValueError('กรุณาระบุชื่อ Template')
+        if not alert_type_code:
+            raise ValueError('กรุณาเลือก Alert Type')
+        create_template(db, template_name.strip(), 'claim_alert',
+            json.dumps({'preset': 'claim_alert', 'alert_type_code': alert_type_code}, ensure_ascii=False),
+            get_alert_type_config_by_code(db, alert_type_code).display_name if get_alert_type_config_by_code(db, alert_type_code) else 'แจ้งเตือน')
+        write_log(db, session.get('username'), client_ip(request), 'template.create.claim_alert', 'success', template_name.strip())
+        return templates.TemplateResponse('admin/claim_alert_builder.html', ctx(
+            request, db, session,
+            alert_type_configs=get_alert_type_configs(db),
+            approved_queries=get_queries(db),
+            form_error=None, form_values=form_values, saved=True))
+    except Exception as exc:
+        return templates.TemplateResponse('admin/claim_alert_builder.html', ctx(
+            request, db, session,
+            alert_type_configs=get_alert_type_configs(db),
+            approved_queries=get_queries(db),
+            form_error=str(exc), form_values=form_values, saved=False), status_code=400)
+
+def _validate_atc_json(required_fields, key_fields, field_map):
+    import json as _j
+    for label, val in [('required_fields', required_fields), ('key_fields', key_fields), ('field_map', field_map)]:
+        if val and val.strip():
+            try:
+                _j.loads(val)
+            except Exception:
+                raise ValueError(f'{label} ไม่ใช่ JSON ที่ถูกต้อง')
 
 @router.get('/logout')
 def logout(request:Request, db:Session=Depends(get_db)):

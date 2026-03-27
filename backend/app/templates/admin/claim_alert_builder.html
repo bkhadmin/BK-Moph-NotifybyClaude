@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Claim Alert Builder</h1>
+    <div class="muted" style="margin-top:4px;font-size:.92rem;">สร้าง Template สำหรับ Alert ประเภทต่างๆ — 1 row = 1 bubble + 1 ปุ่มรับเคส</div>
+  </div>
+  <a class="btn secondary" href="/templates">Back to Templates</a>
+</div>
+
+{% if form_error %}<div class="alert error mt-4">{{ form_error }}</div>{% endif %}
+{% if saved %}<div class="alert mt-4" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:14px;padding:14px 16px;">บันทึก Template เรียบร้อย</div>{% endif %}
+
+<div class="grid-2 mt-6">
+  <form method="post" action="/templates/claim-alert-builder" class="card">
+    <h3>สร้าง Template</h3>
+
+    <div class="mt-3">
+      <label>Template Name</label>
+      <input class="input" name="template_name" value="{{ form_values.template_name if form_values else '' }}" placeholder="เช่น ยาวิกฤต Claim" required>
+    </div>
+
+    <div class="mt-3">
+      <label>Alert Type Config</label>
+      {% if alert_type_configs %}
+      <select class="input" name="alert_type_code" required>
+        <option value="">-- เลือก Alert Type --</option>
+        {% for cfg in alert_type_configs %}
+        <option value="{{ cfg.type_code }}"
+          {% if form_values and form_values.alert_type_code == cfg.type_code %}selected{% endif %}>
+          {{ cfg.display_name }} ({{ cfg.type_code }})
+        </option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <div class="alert error mt-2">ยังไม่มี Alert Type Config — <a href="/alert-type-configs">สร้างก่อน</a></div>
+      <input type="hidden" name="alert_type_code" value="">
+      {% endif %}
+      <div class="muted mt-2">Config กำหนด field ที่ต้องมี, dedup key, และการ map column จาก query</div>
+    </div>
+
+    <div class="mt-3">
+      <label>ใช้ร่วมกับ Approved Query <span class="muted">(เลือกภายหลังได้)</span></label>
+      <select class="input" name="approved_query_id">
+        <option value="">-- ยังไม่เลือก --</option>
+        {% for q in approved_queries %}
+        <option value="{{ q.id }}"
+          {% if form_values and form_values.approved_query_id|string == q.id|string %}selected{% endif %}>
+          {{ q.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="page-actions mt-4">
+      <button class="btn" type="submit">Save Template</button>
+    </div>
+  </form>
+
+  <div class="card">
+    <h3>ลักษณะการทำงาน</h3>
+    <div class="mt-3" style="font-size:.9rem;line-height:2;">
+      <div>— 1 แถวของ query = 1 bubble</div>
+      <div>— 1 bubble = 1 ปุ่มรับเคส</div>
+      <div>— ถ้ารับเคสแล้ว ระบบจะไม่ส่งซ้ำอีก</div>
+      <div>— field ที่แสดงใน bubble ดูจาก <strong>Field Map</strong> ใน Alert Type Config</div>
+    </div>
+    <div class="mt-4">
+      <div style="font-weight:700;margin-bottom:6px;">Alert Type Configs ที่มี</div>
+      {% if alert_type_configs %}
+      {% for cfg in alert_type_configs %}
+      <div class="item" style="padding:8px 0;">
+        <strong>{{ cfg.display_name }}</strong>
+        <div class="muted" style="font-size:.8rem;">{{ cfg.type_code }} · {{ cfg.bubble_title or '' }}</div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="muted">ไม่มี config — <a href="/alert-type-configs">สร้างที่นี่</a></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

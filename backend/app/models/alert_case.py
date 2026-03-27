@@ -8,6 +8,7 @@ class AlertCase(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     case_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    lab_order_number: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     alert_type: Mapped[str] = mapped_column(String(50), nullable=False, default="lab_critical")
     patient_hn: Mapped[str | None] = mapped_column(String(50), nullable=True)
     patient_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -7,6 +7,7 @@ def ensure_module53_permissions(db):
     needed = [
         ("notify_rooms", "Notify Rooms"),
         ("claim_notify_settings", "Claim Notify Settings"),
+        ("alert_type_configs", "Alert Type Configs"),
     ]
     try:
         from app.models.permission import Permission

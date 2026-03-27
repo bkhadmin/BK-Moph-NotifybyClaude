@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from app.db.base import Base
 from app.db.session import engine
-from app.repositories.alert_cases import get_by_case_key, create_item, update_item
+from app.repositories.alert_cases import get_by_case_key, get_by_lab_order_number, create_item, update_item
 from app.services.claim_security import build_signed_claim_url
 
 def ensure_tables():
@@ -15,51 +15,135 @@ def _text(value):
         return ""
     return str(value)
 
-def is_lab_alert_row(row: dict) -> bool:
-    required = ["hn", "ptname", "lab_items_name", "lab_order_result"]
-    return isinstance(row, dict) and all(k in row for k in required)
+def _normalize_row(row: dict) -> dict:
+    """Normalize alternative column names and convert datetime/timedelta to text."""
+    from datetime import date, timedelta
+    item = dict(row)
+    # cur_depart → cur_dep
+    if "cur_dep" not in item and "cur_depart" in item:
+        item["cur_dep"] = item["cur_depart"]
+    # report_date (datetime.date) → report_date_text
+    if "report_date_text" not in item or not item["report_date_text"]:
+        rd = item.get("report_date")
+        if isinstance(rd, date):
+            item["report_date_text"] = rd.strftime("%d/%m/%Y")
+        elif rd:
+            item["report_date_text"] = str(rd)
+    # report_time (timedelta seconds) → report_time_text
+    if "report_time_text" not in item or not item["report_time_text"]:
+        rt = item.get("report_time")
+        if isinstance(rt, timedelta):
+            total = int(rt.total_seconds())
+            hh, rem = divmod(total, 3600)
+            mm, ss = divmod(rem, 60)
+            item["report_time_text"] = f"{hh:02d}:{mm:02d}"
+        elif rt:
+            item["report_time_text"] = str(rt)
+    return item
 
-def build_case_key(row: dict) -> str:
-    raw = "|".join([
-        _text(row.get("hn")),
-        _text(row.get("lab_items_name")),
-        _text(row.get("lab_order_result")),
-        _text(row.get("report_date_text") or row.get("report_date")),
-        _text(row.get("report_time_text") or row.get("report_time")),
-        _text(row.get("cur_dep")),
-    ])
+# ---------- config helpers ----------
+
+def _default_cfg() -> dict:
+    """Fallback config matching the original hardcoded lab_critical behaviour."""
+    return {
+        "type_code": "lab_critical",
+        "required_fields": ["hn", "lab_items_name", "lab_order_result"],
+        "key_fields": ["hn", "lab_items_name", "lab_order_result",
+                       "report_date_text", "report_time_text", "cur_dep"],
+        "field_map": {
+            "patient_hn": "hn",
+            "patient_name": "ptname",
+            "department": "cur_dep",
+            "item_name": "lab_items_name",
+            "item_value": "lab_order_result",
+            "report_date": "report_date_text",
+            "report_time": "report_time_text",
+            "doctor": "แพทย์ผู้สั่ง",
+        },
+    }
+
+def _is_alert_row(row: dict, cfg: dict) -> bool:
+    required = cfg.get("required_fields") or []
+    return isinstance(row, dict) and bool(required) and all(k in row for k in required)
+
+def _build_case_key(row: dict, cfg: dict) -> str:
+    key_fields = cfg.get("key_fields") or []
+    raw = "|".join([_text(row.get(f)) for f in key_fields])
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:40]
 
-def ensure_case_for_row(db, row: dict):
+# ---------- backward-compat public helpers ----------
+
+def is_lab_alert_row(row: dict) -> bool:
+    return _is_alert_row(row, _default_cfg())
+
+def build_case_key(row: dict) -> str:
+    return _build_case_key(row, _default_cfg())
+
+# ---------- main logic ----------
+
+def _extract_lab_order_number(row: dict) -> str | None:
+    """Extract lab_order_number from common column name aliases."""
+    val = (
+        row.get("lab_order_number")
+        or row.get("order_number")
+        or row.get("lab_order_no")
+        or row.get("r.lab_order_number")
+    )
+    return str(val) if val is not None and str(val).strip() else None
+
+
+def ensure_case_for_row(db, row: dict, alert_cfg: dict | None = None):
     ensure_tables()
-    if not is_lab_alert_row(row):
+    cfg = alert_cfg or _default_cfg()
+    if not _is_alert_row(row, cfg):
         return None
-    case_key = build_case_key(row)
+
+    lab_order_number = _extract_lab_order_number(row)
+
+    # Primary dedup: if lab_order_number present, check it first
+    # Same order number = same case regardless of department change
+    if lab_order_number:
+        existing = get_by_lab_order_number(db, lab_order_number)
+        if existing:
+            return existing
+
+    # Fallback dedup: case_key hash
+    case_key = _build_case_key(row, cfg)
     case = get_by_case_key(db, case_key)
-    if not case:
-        case = create_item(
-            db,
-            case_key=case_key,
-            alert_type="lab_critical",
-            patient_hn=_text(row.get("hn")),
-            patient_name=_text(row.get("ptname")),
-            department=_text(row.get("cur_dep")),
-            item_name=_text(row.get("lab_items_name")),
-            item_value=_text(row.get("lab_order_result")),
-            report_date_text=_text(row.get("report_date_text") or row.get("report_date")),
-            report_time_text=_text(row.get("report_time_text") or row.get("report_time")),
-            status="NEW",
-            source_row_json=json.dumps(row, ensure_ascii=False, default=str),
-        )
+    if case:
+        # Backfill lab_order_number if it's now available
+        if lab_order_number and not case.lab_order_number:
+            from app.repositories.alert_cases import update_item as _upd
+            _upd(db, case, lab_order_number=lab_order_number)
+        return case
+
+    # Create new case
+    fm = cfg.get("field_map", {})
+    case = create_item(
+        db,
+        case_key=case_key,
+        lab_order_number=lab_order_number,
+        alert_type=cfg.get("type_code", "lab_critical"),
+        patient_hn=_text(row.get(fm.get("patient_hn", "hn"))),
+        patient_name=_text(row.get(fm.get("patient_name", "ptname"))),
+        department=_text(row.get(fm.get("department", "cur_dep"))),
+        item_name=_text(row.get(fm.get("item_name", "lab_items_name"))),
+        item_value=_text(row.get(fm.get("item_value", "lab_order_result"))),
+        report_date_text=_text(row.get(fm.get("report_date", "report_date_text")) or row.get("report_date_text")),
+        report_time_text=_text(row.get(fm.get("report_time", "report_time_text")) or row.get("report_time_text")),
+        status="NEW",
+        source_row_json=json.dumps(row, ensure_ascii=False, default=str),
+    )
     return case
 
-def enrich_alert_rows(db, rows, base_url: str):
+def enrich_alert_rows(db, rows, base_url: str, alert_cfg: dict | None = None):
     ensure_tables()
     out = []
     base_url = (base_url or "").rstrip("/")
+    cfg = alert_cfg or _default_cfg()
     for row in rows or []:
-        item = dict(row)
-        case = ensure_case_for_row(db, item)
+        item = _normalize_row(dict(row))
+        case = ensure_case_for_row(db, item, alert_cfg=cfg)
         if case:
             item["case_key"] = case.case_key
             item["claim_url"] = build_signed_claim_url(base_url, case.case_key)
@@ -109,11 +193,6 @@ def list_open_alert_cases(db):
             except Exception:
                 pass
     return rows
-
-
-from datetime import datetime
-
-
 
 def mark_alert_case_sent(db, case_key=None, lab_order_number=None):
     try:

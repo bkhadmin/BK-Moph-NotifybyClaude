@@ -39,9 +39,25 @@ def _build_messages(db, job):
     data = preview_query(q.sql_text, max_rows=q.max_rows)
     rows = data.get("rows") or []
 
-    # enrich lab alert rows with case_key / claim_url / claim status, then skip already-claimed cases
+    # Resolve alert type config from template content
+    alert_cfg = None
     try:
-        enriched_rows = enrich_alert_rows(db, rows, os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL") or "http://192.168.191.12:8012")
+        tc = json.loads(t.content or "{}")
+        alert_type_code = tc.get("alert_type_code")
+        if not alert_type_code and t.template_type == "lab_critical_claim":
+            alert_type_code = "lab_critical"
+        if alert_type_code:
+            from app.repositories.alert_type_configs import get_by_code as _get_atc, to_cfg_dict as _atc_dict
+            cfg_row = _get_atc(db, alert_type_code)
+            if cfg_row:
+                alert_cfg = _atc_dict(cfg_row)
+    except Exception:
+        pass
+
+    # enrich alert rows with case_key / claim_url / claim status, then skip already-claimed cases
+    try:
+        base_url = os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL") or "http://192.168.191.12:8012"
+        enriched_rows = enrich_alert_rows(db, rows, base_url, alert_cfg=alert_cfg)
         enriched_rows = [normalize_alert_row_identity(x) for x in (enriched_rows or [])]
     except Exception:
         enriched_rows = rows
@@ -59,7 +75,7 @@ def _build_messages(db, job):
     if not filtered_rows:
         return [], []
 
-    dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, filtered_rows)
+    dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, filtered_rows, alert_cfg=alert_cfg)
     if dynamic_payload is not None:
         messages = dynamic_payload
     elif t.template_type == "flex":

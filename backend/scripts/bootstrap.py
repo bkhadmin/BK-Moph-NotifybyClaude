@@ -45,6 +45,14 @@ def ensure_module59_schema():
             conn.execute(text("ALTER TABLE schedule_jobs ADD COLUMN notify_room_id INT NULL"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE alert_cases ADD COLUMN lab_order_number VARCHAR(100) NULL"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("CREATE INDEX ix_alert_cases_lab_order_number ON alert_cases (lab_order_number)"))
+        except Exception:
+            pass
 
 def seed():
     Base.metadata.create_all(bind=engine)
@@ -68,10 +76,25 @@ def seed():
                 db.add(Menu(code=code,name=name,path=path))
         ensure_module53_permissions(db)
         db.commit()
-        db.execute(text('DELETE FROM role_permissions'))
+        # Only insert default role_permissions that don't exist yet — never delete existing ones
+        # so that manually assigned permissions via RBAC UI are preserved across restarts
         for role_code, perm_codes in ROLE_PERMS.items():
+            role_row = role_map.get(role_code)
+            if not role_row:
+                continue
             for perm_code in perm_codes:
-                db.execute(text('INSERT INTO role_permissions (role_id, permission_id) VALUES (:rid,:pid)'), {'rid':role_map[role_code].id,'pid':perm_map[perm_code].id})
+                perm_row = perm_map.get(perm_code)
+                if not perm_row:
+                    continue
+                exists = db.execute(
+                    text('SELECT 1 FROM role_permissions WHERE role_id=:rid AND permission_id=:pid LIMIT 1'),
+                    {'rid': role_row.id, 'pid': perm_row.id}
+                ).fetchone()
+                if not exists:
+                    db.execute(
+                        text('INSERT INTO role_permissions (role_id, permission_id) VALUES (:rid,:pid)'),
+                        {'rid': role_row.id, 'pid': perm_row.id}
+                    )
         user=db.query(User).filter(User.username==settings.internal_superadmin_username).first()
         if not user:
             db.add(User(username=settings.internal_superadmin_username,password_hash=hash_password(settings.internal_superadmin_password),display_name='Super Admin',auth_type='local',role_id=role_map['superadmin'].id))
@@ -89,5 +112,13 @@ def ensure_module59_schema():
     with engine.begin() as conn:
         try:
             conn.execute(text("ALTER TABLE schedule_jobs ADD COLUMN notify_room_id INT NULL"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE alert_cases ADD COLUMN lab_order_number VARCHAR(100) NULL"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("CREATE INDEX ix_alert_cases_lab_order_number ON alert_cases (lab_order_number)"))
         except Exception:
             pass
