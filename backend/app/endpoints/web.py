@@ -1329,7 +1329,7 @@ def dynamic_flex_builder_submit(
 
 
 @router.get('/settings/claim-notify')
-def claim_notify_settings_page(request:Request, db:Session=Depends(get_db)):
+def claim_notify_settings_page(request:Request, db:Session=Depends(get_db), saved:bool=False):
     session=require_session(request)
     require_menu(db, session, 'claim_notify_settings')
     return templates.TemplateResponse('admin/claim_notify_settings.html', ctx(
@@ -1337,7 +1337,27 @@ def claim_notify_settings_page(request:Request, db:Session=Depends(get_db)):
         claim_notify_enabled=(os.getenv('CLAIM_NOTIFY_ENABLED', 'Y') or 'Y'),
         notify_rooms=get_notify_rooms(db),
         active_notify_rooms=get_active_notify_rooms(db),
+        alert_type_configs=get_alert_type_configs(db),
+        saved=saved,
     ))
+
+@router.post('/settings/claim-notify/{cfg_id}/update-templates')
+def claim_notify_update_templates(
+    cfg_id: int, request: Request,
+    display_lines: str = Form(''),
+    claim_notify_template: str = Form(''),
+    db: Session = Depends(get_db),
+):
+    session = require_session(request)
+    require_menu(db, session, 'claim_notify_settings')
+    row = get_alert_type_config_by_id(db, cfg_id)
+    if row:
+        update_alert_type_config(db, row,
+            display_lines=display_lines.strip() or None,
+            claim_notify_template=claim_notify_template.strip() or None,
+        )
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse('/settings/claim-notify?saved=1', status_code=303)
 
 @router.get('/alerts/cases')
 def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:str='', date_from:str='', date_to:str='', db:Session=Depends(get_db)):
@@ -1604,6 +1624,8 @@ def alert_type_configs_create(
     required_fields:str=Form(''),
     key_fields:str=Form(''),
     field_map:str=Form(''),
+    display_lines:str=Form(''),
+    claim_notify_template:str=Form(''),
     is_active:str=Form('Y'),
     db:Session=Depends(get_db)
 ):
@@ -1616,6 +1638,8 @@ def alert_type_configs_create(
             required_fields=required_fields.strip() or None,
             key_fields=key_fields.strip() or None,
             field_map=field_map.strip() or None,
+            display_lines=display_lines.strip() or None,
+            claim_notify_template=claim_notify_template.strip() or None,
             is_active=is_active)
         write_log(db, session.get('username'), client_ip(request), 'alert_type_config.create', 'success', type_code)
         return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, saved=True))
@@ -1632,6 +1656,8 @@ def alert_type_configs_update(
     required_fields:str=Form(''),
     key_fields:str=Form(''),
     field_map:str=Form(''),
+    display_lines:str=Form(''),
+    claim_notify_template:str=Form(''),
     is_active:str=Form('Y'),
     db:Session=Depends(get_db)
 ):
@@ -1647,6 +1673,8 @@ def alert_type_configs_update(
             required_fields=required_fields.strip() or None,
             key_fields=key_fields.strip() or None,
             field_map=field_map.strip() or None,
+            display_lines=display_lines.strip() or None,
+            claim_notify_template=claim_notify_template.strip() or None,
             is_active=is_active)
         write_log(db, session.get('username'), client_ip(request), 'alert_type_config.update', 'success', type_code)
         return templates.TemplateResponse('admin/alert_type_configs.html', _atc_ctx(request, db, session, saved=True))

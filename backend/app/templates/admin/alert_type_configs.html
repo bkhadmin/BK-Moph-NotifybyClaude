@@ -56,6 +56,25 @@
       <textarea class="textarea" name="field_map" rows="9" placeholder='{"patient_hn":"hn","patient_name":"ptname","department":"cur_dep","item_name":"drug_name","item_value":"dose","report_date":"order_date","report_time":"order_time","doctor":"doctor_name"}'>{{ edit_row.field_map if edit_row else '' }}</textarea>
     </div>
     <div class="mt-3">
+      <label>Display Lines <span class="muted">(JSON array — บรรทัดแสดงผลใน bubble แทน item_name = item_value)</span></label>
+      <div class="muted" style="font-size:.8rem;margin-bottom:6px;">
+        ใช้ <code>{ชื่อ column}</code> ใน text เช่น <code>{"text": "ชื่อยา {drug_name}", "color": "#dc2626"}</code><br>
+        fields: <code>text</code> (required), <code>color</code> (#hex), <code>bold</code> (true/false), <code>size</code> (sm/md/lg)
+      </div>
+      <textarea class="textarea" name="display_lines" rows="5" placeholder='[
+  {"text": "ชื่อยา {drug_name}", "color": "#dc2626", "bold": true},
+  {"text": "ค่า EGFR = {egfr}", "color": "#dc2626", "bold": true}
+]'>{{ edit_row.display_lines if edit_row else '' }}</textarea>
+    </div>
+    <div class="mt-3">
+      <label>Claim Notify Template <span class="muted">(ข้อความตอบกลับหลังรับเคส — ว่างจะใช้ค่า default)</span></label>
+      <div class="muted" style="font-size:.8rem;margin-bottom:6px;">
+        ตัวแปร: <code>{patient_name}</code>, <code>{patient_hn}</code>, <code>{item_name}</code>, <code>{item_value}</code>,
+        <code>{department}</code>, <code>{claimed_by}</code>, <code>{claimed_at}</code>
+      </div>
+      <textarea class="textarea" name="claim_notify_template" rows="7" placeholder="✅ รับเคสเรียบร้อย&#10;&#10;ผู้ป่วย: {patient_name}&#10;HN: {patient_hn}&#10;ชื่อยา: {item_name}&#10;ค่า EGFR: {item_value}&#10;ผู้รับเคส: {claimed_by}&#10;เวลา: {claimed_at}">{{ edit_row.claim_notify_template if edit_row else '' }}</textarea>
+    </div>
+    <div class="mt-3">
       <label>สถานะ</label>
       <select class="input" name="is_active">
         <option value="Y" {% if not edit_row or edit_row.is_active == 'Y' %}selected{% endif %}>Active</option>

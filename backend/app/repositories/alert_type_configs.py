@@ -53,6 +53,8 @@ def to_cfg_dict(row: AlertTypeConfig) -> dict:
         "required_fields": _parse_json(row.required_fields, []),
         "key_fields": _parse_json(row.key_fields, []),
         "field_map": _parse_json(row.field_map, {}),
+        "display_lines": _parse_json(row.display_lines, []),
+        "claim_notify_template": row.claim_notify_template or "",
     }
 
 

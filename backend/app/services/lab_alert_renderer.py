@@ -1,4 +1,8 @@
+import re
 from app.services.timezone_utils import thai_date_str as _thai_date_str
+
+_FIELD_RE = re.compile(r"\{([a-zA-Z0-9_ก-๙]+)\}")
+
 
 def _get_field(row: dict, field_map: dict, standard_name: str, fallback: str = "") -> str:
     col = field_map.get(standard_name, "")
@@ -7,9 +11,15 @@ def _get_field(row: dict, field_map: dict, standard_name: str, fallback: str = "
         val = row.get(standard_name, fallback)
     return str(val) if val else fallback
 
+
 def _fmt_date(value: str) -> str:
     """Convert date string to Thai Buddhist Era format for LINE bubbles."""
     return _thai_date_str(value) if value else ""
+
+
+def _render_line(template: str, row: dict) -> str:
+    """Replace {field} placeholders with row values."""
+    return _FIELD_RE.sub(lambda m: str(row.get(m.group(1), "")), template)
 
 
 def build_claim_alert_carousel(rows: list, cfg: dict) -> list:
@@ -44,7 +54,22 @@ def build_claim_alert_carousel(rows: list, cfg: dict) -> list:
             contents.append({"type": "text", "text": hn_dep, "size": "xs",
                               "color": "#64748b", "margin": "sm", "wrap": True})
         contents.append({"type": "separator", "margin": "md"})
-        if item_name:
+        display_lines = cfg.get("display_lines") or []
+        if display_lines:
+            # กำหนด display_lines เองใน AlertTypeConfig เช่น ชื่อยา {drug_name} / ค่า EGFR = {egfr}
+            for line_def in display_lines:
+                text = _render_line(line_def.get("text", ""), row)
+                if text.strip():
+                    contents.append({
+                        "type": "text",
+                        "text": text,
+                        "weight": "bold" if line_def.get("bold", True) else "normal",
+                        "size": line_def.get("size", "md"),
+                        "color": line_def.get("color", "#dc2626"),
+                        "margin": "md", "wrap": True,
+                    })
+        elif item_name:
+            # default: item_name = item_value บรรทัดเดียว
             contents.append({"type": "text",
                               "text": f"{item_name} = {item_value}" if item_value else item_name,
                               "weight": "bold", "size": "md", "color": "#dc2626",

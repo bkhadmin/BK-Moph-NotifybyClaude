@@ -57,6 +57,14 @@ def ensure_schema():
             conn.execute(text("ALTER TABLE alert_cases ADD COLUMN notify_room_id INT NULL"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE alert_type_configs ADD COLUMN display_lines TEXT NULL"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE alert_type_configs ADD COLUMN claim_notify_template TEXT NULL"))
+        except Exception:
+            pass
 
 def seed():
     Base.metadata.create_all(bind=engine)

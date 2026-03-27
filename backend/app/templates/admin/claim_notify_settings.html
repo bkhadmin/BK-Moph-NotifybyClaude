@@ -5,53 +5,260 @@
 .card .muted { color: #6b7280 !important; }
 .stat-card { background:#fff; color:#111827; }
 .stat-card .stat-label { color:#6b7280; }
-code { color:#111827; background:#f3f4f6; padding:2px 6px; border-radius:6px; }
+code { color:#111827; background:#f3f4f6; padding:2px 6px; border-radius:6px; font-size:.82em; }
 .table td, .table th { color:#111827; }
 .badge.success { color:#065f46 !important; }
 .badge.danger { color:#991b1b !important; }
+.atc-card { border:1.5px solid #e5e7eb; border-radius:14px; padding:20px 22px; margin-bottom:18px; background:#fff; }
+.atc-card h4 { font-size:1rem; font-weight:800; color:#1e3a5f; margin-bottom:4px; }
+.field-row { margin-top:14px; }
+.field-row label { display:block; font-size:.82rem; font-weight:700; color:#374151; margin-bottom:5px; }
+.field-hint { font-size:.78rem; color:#6b7280; margin-bottom:5px; }
+textarea.cfg-textarea { width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:10px 12px;
+  font-size:.83rem; font-family:monospace; color:#1e3a5f; resize:vertical; outline:none; }
+textarea.cfg-textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.save-btn { margin-top:12px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
+  border:0; padding:9px 22px; border-radius:10px; font-size:.88rem; font-weight:700; cursor:pointer; }
+.save-btn:hover { opacity:.9; }
+
+/* LINE Bubble Preview */
+.preview-wrap { display:flex; gap:20px; align-items:flex-start; }
+.preview-wrap .form-col { flex:1; min-width:0; }
+.preview-col { width:260px; flex-shrink:0; position:sticky; top:16px; }
+.preview-label { font-size:.75rem; font-weight:700; color:#6b7280; text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:8px; }
+.line-phone { background:#c8e6c9; border-radius:18px; padding:12px 8px; min-height:180px; }
+.line-bubble { background:#fff; border-radius:14px; padding:14px; box-shadow:0 2px 8px rgba(0,0,0,.12); font-family:'Segoe UI',sans-serif; }
+.bubble-title { font-weight:800; font-size:.9rem; line-height:1.3; margin-bottom:8px; word-break:break-word; }
+.bubble-patient { font-weight:700; font-size:.78rem; color:#0f172a; margin-bottom:2px; }
+.bubble-sub { font-size:.72rem; color:#64748b; margin-bottom:6px; }
+.bubble-sep { border:none; border-top:1px solid #e2e8f0; margin:8px 0; }
+.bubble-line { font-size:.8rem; margin-bottom:3px; word-break:break-word; }
+.bubble-date { font-size:.7rem; color:#64748b; margin-top:4px; }
+.bubble-status { font-size:.7rem; color:#2563eb; margin-top:2px; }
+.bubble-footer { margin-top:10px; }
+.bubble-btn { display:block; width:100%; padding:9px; background:#06c755; color:#fff;
+  border-radius:8px; text-align:center; font-size:.8rem; font-weight:700; border:none; cursor:default; }
+.field-tag { display:inline-block; background:#fef3c7; color:#92400e; border-radius:4px;
+  padding:0 4px; font-size:.75rem; font-weight:600; }
+
+/* Claim Notify Preview */
+.notify-preview { background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px;
+  padding:12px 14px; font-size:.8rem; color:#1e3a5f; white-space:pre-wrap; font-family:inherit;
+  min-height:60px; line-height:1.6; }
+.err-hint { color:#dc2626; font-size:.75rem; margin-top:4px; display:none; }
 </style>
+
 <div class="page-header">
   <div>
     <h1 class="page-title">Claim Notify Settings</h1>
-    <div class="muted">การแจ้งเตือนอัตโนมัติหลังมีผู้รับเคส และการตั้งค่าห้องส่งข้อความ MOPH Notify</div>
+    <div class="muted">กำหนดรูปแบบ bubble แจ้งเตือนและข้อความตอบกลับหลังรับเคส ตามประเภทการแจ้งเตือน</div>
   </div>
   <div class="page-actions">
-    <a class="btn" href="/notify/rooms">Manage Notify Rooms</a>
-    <a class="btn secondary" href="/notify/test">Open MOPH Notify</a>
+    <a class="btn secondary" href="/alert-type-configs">Alert Type Configs</a>
+    <a class="btn secondary" href="/notify/rooms">Notify Rooms</a>
   </div>
 </div>
 
+{% if saved %}
+<div style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:12px;padding:13px 16px;margin-top:16px;font-weight:700;">
+  ✅ บันทึกเรียบร้อยแล้ว
+</div>
+{% endif %}
+
 <div class="stat-grid mt-6">
   <div class="stat-card">
-    <div class="stat-label">Claim Notify Enabled</div>
-    <div class="stat-value">{{ claim_notify_enabled }}</div>
+    <div class="stat-label">Claim Notify</div>
+    <div class="stat-value" style="font-size:1.1rem;">{% if claim_notify_enabled == 'Y' %}เปิดใช้งาน{% else %}ปิดใช้งาน{% endif %}</div>
   </div>
   <div class="stat-card success">
-    <div class="stat-label">Notify Rooms ทั้งหมด</div>
-    <div class="stat-value">{{ (notify_rooms or [])|length }}</div>
+    <div class="stat-label">Alert Types ที่กำหนด</div>
+    <div class="stat-value">{{ (alert_type_configs or [])|length }}</div>
   </div>
   <div class="stat-card">
-    <div class="stat-label">Notify Rooms ที่ Active</div>
+    <div class="stat-label">Notify Rooms Active</div>
     <div class="stat-value">{{ (active_notify_rooms or [])|length }}</div>
   </div>
 </div>
 
-<div class="grid-2 mt-6">
-  <div class="card">
-    <h3>วิธีใช้งาน</h3>
-    <div class="item"><strong>ส่งมือ</strong><div class="muted">ไปที่ /notify/test แล้วเลือก Notify Room ก่อนส่ง</div></div>
-    <div class="item"><strong>ส่งตาม Schedule</strong><div class="muted">ไปที่ /schedules แล้วเลือก Notify Room ของ schedule นั้น</div></div>
-    <div class="item"><strong>Fallback</strong><div class="muted">ถ้าไม่เลือกห้อง ระบบจะใช้ค่า default จาก .env</div></div>
+{# ── Per-type template editor ── #}
+<div class="card mt-6">
+  <h3 style="margin-bottom:6px;">รูปแบบข้อความตาม Alert Type</h3>
+  <div class="muted" style="font-size:.85rem;margin-bottom:18px;">
+    กำหนด <strong>Display Lines</strong> และ <strong>Claim Notify Template</strong> แยกตามประเภท — ดูตัวอย่างด้านขวาได้ทันที
   </div>
-  <div class="card">
-    <h3>หลังรับเคส</h3>
-    <div class="item"><strong>สถานะปัจจุบัน</strong><div class="muted">{% if claim_notify_enabled == 'Y' %}เปิดใช้งาน{% else %}ปิดใช้งาน{% endif %}</div></div>
-    <div class="item"><strong>สิ่งที่จะแจ้ง</strong><div class="muted">ชื่อผู้ป่วย, HN, รายการ, ค่า, แผนก, ผู้รับเคส, เวลารับเคส</div></div>
-    <div class="item"><strong>หมายเหตุ</strong><div class="muted">การแจ้งหลังรับเคสจะใช้ห้อง default จาก .env เว้นแต่คุณจะขยาย logic เพิ่มภายหลัง</div></div>
+
+  {% for cfg in alert_type_configs or [] %}
+  {% set cid = cfg.id %}
+  <div class="atc-card">
+    <h4>
+      {{ cfg.display_name }}
+      <span style="background:#eff6ff;color:#1d4ed8;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700;margin-left:8px;">{{ cfg.type_code }}</span>
+      <span class="badge {% if cfg.is_active == 'Y' %}success{% else %}danger{% endif %}" style="margin-left:6px;font-size:.72rem;">{{ 'Active' if cfg.is_active == 'Y' else 'Inactive' }}</span>
+    </h4>
+    <div class="muted" style="font-size:.8rem;margin-bottom:12px;">Bubble title: {{ cfg.bubble_title or '-' }} · สี: {{ cfg.bubble_title_color or '#b91c1c' }}</div>
+
+    <form method="post" action="/settings/claim-notify/{{ cid }}/update-templates">
+
+      {# ── Display Lines + Bubble Preview ── #}
+      <div class="field-row">
+        <label>Display Lines <span style="font-weight:400;color:#6b7280;">(บรรทัดเนื้อหาใน bubble — แทน default item_name = item_value)</span></label>
+        <div class="field-hint">
+          JSON array · <code>text</code> ใช้ <code>{ชื่อ_column}</code> ได้เลย ·
+          options: <code>color</code> (hex), <code>bold</code> (true/false), <code>size</code> (sm/md/lg)
+        </div>
+        <div class="preview-wrap">
+          <div class="form-col">
+            <textarea class="cfg-textarea" name="display_lines" rows="5"
+              id="dl_{{ cid }}"
+              placeholder='[&#10;  {"text": "ชื่อยา {drug_name}", "color": "#dc2626", "bold": true},&#10;  {"text": "ค่า EGFR = {egfr}", "color": "#dc2626", "bold": true}&#10;]'>{{ cfg.display_lines or '' }}</textarea>
+            <div class="err-hint" id="dl_err_{{ cid }}">⚠ JSON ไม่ถูกต้อง</div>
+          </div>
+
+          {# Bubble Preview #}
+          <div class="preview-col">
+            <div class="preview-label">ตัวอย่าง LINE Bubble</div>
+            <div class="line-phone">
+              <div class="line-bubble">
+                <div class="bubble-title" id="pv_title_{{ cid }}"
+                  style="color:{{ cfg.bubble_title_color or '#b91c1c' }}">{{ cfg.bubble_title or cfg.display_name }}</div>
+                <div class="bubble-patient">ผู้ป่วย นายตัวอย่าง นามสกุล</div>
+                <div class="bubble-sub">HN 0001234 | แผนกอายุรกรรม</div>
+                <hr class="bubble-sep">
+                <div id="pv_lines_{{ cid }}">
+                  {# จะถูก render โดย JS #}
+                </div>
+                <div class="bubble-date">วันที่ 18 มี.ค. 2569 เวลา 08:30 น.</div>
+                <div class="bubble-date">แพทย์ผู้สั่ง นพ.ตัวอย่าง</div>
+                <div class="bubble-status">สถานะ รอรับเคส</div>
+                <div class="bubble-footer">
+                  <button class="bubble-btn">รับเคส</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ── Claim Notify Template + Text Preview ── #}
+      <div class="field-row" style="margin-top:20px;">
+        <label>Claim Notify Template <span style="font-weight:400;color:#6b7280;">(ข้อความตอบกลับหลังมีคนรับเคส — ว่างจะใช้ค่า default)</span></label>
+        <div class="field-hint">
+          ตัวแปร: <code>{patient_name}</code> <code>{patient_hn}</code> <code>{item_name}</code> <code>{item_value}</code>
+          <code>{department}</code> <code>{claimed_by}</code> <code>{claimed_at}</code>
+        </div>
+        <div class="preview-wrap">
+          <div class="form-col">
+            <textarea class="cfg-textarea" name="claim_notify_template" rows="7"
+              id="cn_{{ cid }}"
+              placeholder="✅ รับเคสเรียบร้อย&#10;&#10;ผู้ป่วย: {patient_name}&#10;HN: {patient_hn}&#10;ชื่อยา: {item_name}&#10;ค่า EGFR: {item_value}&#10;ผู้รับเคส: {claimed_by}&#10;เวลา: {claimed_at}">{{ cfg.claim_notify_template or '' }}</textarea>
+          </div>
+          <div class="preview-col">
+            <div class="preview-label">ตัวอย่างข้อความตอบกลับ</div>
+            <div class="notify-preview" id="pv_notify_{{ cid }}"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="save-btn" type="submit">💾 บันทึก {{ cfg.type_code }}</button>
+    </form>
   </div>
+
+  <script>
+  (function(){
+    var cid = {{ cid }};
+    var SAMPLE = {
+      patient_name: 'นายตัวอย่าง นามสกุล',
+      patient_hn: '0001234',
+      item_name: 'METFORMIN 500 mg.',
+      item_value: '21.397',
+      department: 'แผนกอายุรกรรม',
+      claimed_by: 'พว.สมใจ ใจดี',
+      claimed_at: '18 มี.ค. 2569 09:15 น.',
+      drug_name: 'METFORMIN 500 mg.',
+      egfr: '21.397',
+      hn: '0001234',
+      ptname: 'นายตัวอย่าง นามสกุล',
+      cur_dep: 'แผนกอายุรกรรม',
+      doctor_name: 'นพ.ตัวอย่าง บุญญาภาพงษ์',
+      vstdate: '18/03/2568',
+    };
+    var DEFAULT_NOTIFY = "✅ รับเคสเรียบร้อย\n\nผู้ป่วย: {patient_name}\nHN: {patient_hn}\nรายการ: {item_name}\nค่า: {item_value}\nแผนก: {department}\nผู้รับเคส: {claimed_by}\nเวลารับเคส: {claimed_at}\nสถานะ: รับเคสแล้ว";
+
+    function tag(v) {
+      return '<span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:0 3px;font-weight:600">'+v+'</span>';
+    }
+    function replaceFields(text) {
+      return text.replace(/\{([a-zA-Z0-9_\u0E00-\u0E7F]+)\}/g, function(_,f){
+        return tag(SAMPLE[f] !== undefined ? SAMPLE[f] : '{'+f+'}');
+      });
+    }
+
+    window['updateBubble_'+cid] = function() {
+      var raw = document.getElementById('dl_'+cid).value.trim();
+      var errEl = document.getElementById('dl_err_'+cid);
+      var linesEl = document.getElementById('pv_lines_'+cid);
+      if (!raw) {
+        linesEl.innerHTML = '<div class="bubble-line" style="color:#dc2626;font-weight:700;font-size:.82rem">'
+          + tag('METFORMIN 500 mg.') + ' = ' + tag('21.397') + '</div>';
+        errEl.style.display='none'; return;
+      }
+      try {
+        var lines = JSON.parse(raw);
+        errEl.style.display='none';
+        var html = '';
+        lines.forEach(function(l){
+          var color = l.color || '#0f172a';
+          var weight = l.bold !== false ? '700' : '400';
+          var size = {sm:'.75rem',md:'.82rem',lg:'.9rem'}[l.size] || '.82rem';
+          html += '<div class="bubble-line" style="color:'+color+';font-weight:'+weight+';font-size:'+size+'">'
+                + replaceFields(l.text||'') + '</div>';
+        });
+        linesEl.innerHTML = html || '<div class="bubble-line" style="color:#94a3b8;font-style:italic;font-size:.75rem">ยังไม่มีบรรทัด</div>';
+      } catch(e) {
+        errEl.style.display='block';
+      }
+    };
+
+    window['updateNotify_'+cid] = function() {
+      var raw = (document.getElementById('cn_'+cid).value || '').trim() || DEFAULT_NOTIFY;
+      var el = document.getElementById('pv_notify_'+cid);
+      if (!el) return;
+      // escape HTML then re-insert newlines as <br>, highlight {field}
+      var escaped = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      var html = escaped
+        .replace(/\n/g, '<br>')
+        .replace(/\{([a-zA-Z0-9_\u0E00-\u0E7F]+)\}/g, function(_,f){
+          return tag(SAMPLE[f] !== undefined ? SAMPLE[f] : '{'+f+'}');
+        });
+      el.innerHTML = html;
+    };
+
+    // bind events (input + paste with delay)
+    function bindEvents(taId, fn) {
+      var ta = document.getElementById(taId);
+      if (!ta) return;
+      ta.addEventListener('input', fn);
+      ta.addEventListener('paste', function(){ setTimeout(fn, 30); });
+      ta.addEventListener('keyup', fn);
+    }
+    bindEvents('dl_'+cid, window['updateBubble_'+cid]);
+    bindEvents('cn_'+cid, window['updateNotify_'+cid]);
+
+    // Init
+    window['updateBubble_'+cid]();
+    window['updateNotify_'+cid]();
+  })();
+  </script>
+  {% endfor %}
+
+  {% if not alert_type_configs %}
+  <div class="muted mt-3">ยังไม่มี Alert Type Config — <a href="/alert-type-configs">สร้างที่นี่</a></div>
+  {% endif %}
 </div>
 
-<div class="card mt-6">
+{# ── Notify Rooms ── #}
+<div class="card mt-4">
   <h3>Notify Rooms</h3>
   <table class="table">
     <thead><tr><th>Name</th><th>Code</th><th>Status</th><th>Note</th></tr></thead>
