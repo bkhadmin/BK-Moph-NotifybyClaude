@@ -197,14 +197,22 @@ def execute_job(db, job):
         result["send_log_id"] = send_log_id
 
         updated_cases = 0
+        job_notify_room_id = getattr(job, "notify_room_id", None)
         for row in rows or []:
             try:
                 case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
                 lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
                 if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
                     updated_cases += 1
+                # Store which room sent this alert so claim-notify goes back to the same room
+                if job_notify_room_id and case_key:
+                    db.execute(
+                        text("UPDATE alert_cases SET notify_room_id=:rid WHERE case_key=:ck AND notify_room_id IS NULL"),
+                        {"rid": job_notify_room_id, "ck": case_key}
+                    )
             except Exception:
                 pass
+        db.commit()
         result["updated_cases"] = updated_cases
 
         _finalize_success(db, job, now, rows, messages, result)

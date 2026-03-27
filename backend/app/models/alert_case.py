@@ -23,6 +23,7 @@ class AlertCase(Base):
     first_sent_at: Mapped[object | None] = mapped_column(DateTime, nullable=True)
     last_sent_at: Mapped[object | None] = mapped_column(DateTime, nullable=True)
     sent_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    notify_room_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_row_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[object | None] = mapped_column(DateTime, nullable=False, default=bangkok_now_naive)
     updated_at: Mapped[object | None] = mapped_column(DateTime, nullable=False, default=bangkok_now_naive)

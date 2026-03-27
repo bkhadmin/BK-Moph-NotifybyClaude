@@ -39,7 +39,7 @@ ROLE_PERMS={
 }
 
 
-def ensure_module59_schema():
+def ensure_schema():
     with engine.begin() as conn:
         try:
             conn.execute(text("ALTER TABLE schedule_jobs ADD COLUMN notify_room_id INT NULL"))
@@ -53,10 +53,14 @@ def ensure_module59_schema():
             conn.execute(text("CREATE INDEX ix_alert_cases_lab_order_number ON alert_cases (lab_order_number)"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE alert_cases ADD COLUMN notify_room_id INT NULL"))
+        except Exception:
+            pass
 
 def seed():
     Base.metadata.create_all(bind=engine)
-    ensure_module59_schema()
+    ensure_schema()
     db:Session=SessionLocal()
     try:
         role_map={}
@@ -104,21 +108,3 @@ def seed():
 
 if __name__=='__main__':
     seed()
-
-
-from sqlalchemy import text
-
-def ensure_module59_schema():
-    with engine.begin() as conn:
-        try:
-            conn.execute(text("ALTER TABLE schedule_jobs ADD COLUMN notify_room_id INT NULL"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE alert_cases ADD COLUMN lab_order_number VARCHAR(100) NULL"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("CREATE INDEX ix_alert_cases_lab_order_number ON alert_cases (lab_order_number)"))
-        except Exception:
-            pass

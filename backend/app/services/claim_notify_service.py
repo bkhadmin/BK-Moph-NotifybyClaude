@@ -20,11 +20,13 @@ def build_claim_notification_payload(case):
 
 def notify_case_claimed(db, username, case):
     payload = build_claim_notification_payload(case)
+    notify_room_id = getattr(case, 'notify_room_id', None)
     return asyncio.run(
         send_with_log(
             db,
             username or "system",
             payload,
             f"claim_case case_key={case.case_key} claimed_by={case.claimed_by or '-'}",
+            notify_room_id=notify_room_id,
         )
     )
