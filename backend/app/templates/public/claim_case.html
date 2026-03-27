@@ -1,49 +1,180 @@
 <!doctype html>
-<html>
+<html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>รับเคส LAB วิกฤต</title>
+  <title>รับเคสแจ้งเตือน</title>
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;color:#0f172a}
-    .card{max-width:720px;margin:0 auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
-    .muted{color:#64748b}.row{margin-top:10px}.btn{background:#2563eb;color:#fff;border:0;border-radius:10px;padding:12px 18px;cursor:pointer}
-    .input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px}
-    .ok{background:#ecfdf5;color:#166534;padding:12px;border-radius:10px}.err{background:#fef2f2;color:#991b1b;padding:12px;border-radius:10px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .card{background:#fff;border-radius:20px;padding:28px 24px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(15,23,42,.25)}
+    .header{text-align:center;margin-bottom:22px}
+    .header-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 12px}
+    .icon-new{background:#eff6ff}
+    .icon-claimed{background:#f0fdf4}
+    .icon-error{background:#fef2f2}
+    .header h1{font-size:1.15rem;font-weight:800;color:#0f172a}
+    .header p{font-size:.85rem;color:#64748b;margin-top:4px}
+    .info-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:18px}
+    .info-row{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start}
+    .info-row:last-child{border-bottom:none;padding-bottom:0}
+    .info-label{font-size:.78rem;color:#64748b;font-weight:600;min-width:72px;padding-top:1px}
+    .info-value{font-size:.88rem;color:#0f172a;font-weight:600;flex:1;line-height:1.4}
+    .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:700}
+    .badge-new{background:#eff6ff;color:#1d4ed8}
+    .badge-claimed{background:#f0fdf4;color:#15803d}
+    .alert{border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:10px}
+    .alert-success{background:#f0fdf4;color:#15803d;border:1.5px solid #bbf7d0}
+    .alert-error{background:#fef2f2;color:#991b1b;border:1.5px solid #fecaca}
+    .form-group{margin-bottom:14px}
+    .form-label{display:block;font-size:.82rem;font-weight:700;color:#374151;margin-bottom:6px}
+    .form-input{width:100%;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:.9rem;color:#0f172a;outline:none;transition:border-color .2s}
+    .form-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+    .btn{display:block;width:100%;padding:14px;border-radius:12px;font-size:.95rem;font-weight:700;cursor:pointer;border:0;text-align:center;text-decoration:none;transition:opacity .15s}
+    .btn:active{opacity:.85}
+    .btn-primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 4px 14px rgba(37,99,235,.35)}
+    .btn-secondary{background:#f1f5f9;color:#475569;margin-top:10px}
+    .btn-close{background:#0f172a;color:#fff;margin-top:10px}
+    .claimed-box{text-align:center;padding:8px 0}
+    .claimed-box .name{font-size:1.05rem;font-weight:800;color:#15803d;margin-top:4px}
+    .claimed-box .time{font-size:.82rem;color:#64748b;margin-top:4px}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>รับเคส LAB วิกฤต</h1>
-    <div class="muted">เมื่อกดรับเคส ระบบจะบันทึกชื่อผู้รับและเวลารับเคส และจะไม่ส่งแจ้งเตือนเคสนี้ซ้ำอีก</div>
+<div class="card">
 
-    <div class="row"><strong>ผู้ป่วย:</strong> {{ case.patient_name }}</div>
-    <div class="row"><strong>HN:</strong> {{ case.patient_hn }}</div>
-    <div class="row"><strong>รายการ:</strong> {{ case.item_name }} = {{ case.item_value }}</div>
-    <div class="row"><strong>แผนก:</strong> {{ case.department or '-' }}</div>
-    <div class="row"><strong>วันที่/เวลา:</strong> {{ case.report_date_text or '-' }} {{ case.report_time_text or '' }}</div>
-    <div class="row"><strong>สถานะ:</strong> {{ case.status }}</div>
-
-    {% if error %}
-      <div class="err row">{{ error }}</div>
-    {% endif %}
-    {% if success %}
-    <div class="alert success">รับเคสสำเร็จ{% if case and case.claim_notify_status == 'success' %} และแจ้งเตือนเรียบร้อยแล้ว{% endif %}</div>
-      <div class="ok row">รับเคสเรียบร้อยแล้ว โดย {{ case.claimed_by }} เมื่อ {{ case.claimed_at }}</div>
-    {% endif %}
-
-    {% if case and case.status != 'CLAIMED' %}
-    <form method="post" action="/alerts/claim" class="row">
-      <input type="hidden" name="case_key" value="{{ case.case_key }}">
-      <input type="hidden" name="expires" value="{{ request.query_params.get('expires', '') }}">
-      <input type="hidden" name="sig" value="{{ request.query_params.get('sig', '') }}">
-      <label>ชื่อผู้รับเคส</label>
-      <input class="input" name="receiver_name" placeholder="กรอกชื่อผู้รับเคส">
-      <div class="row"><button class="btn" type="submit">ยืนยันรับเคส</button></div>
-    </form>
-    {% endif %}
-    <div class="row"><a class="btn" href="line://">กลับไป LINE</a></div>
+  {% if not case %}
+  {# ── Invalid / expired link ── #}
+  <div class="header">
+    <div class="header-icon icon-error">🔒</div>
+    <h1>ลิงก์ไม่ถูกต้อง</h1>
+    <p>ลิงก์รับเคสหมดอายุหรือไม่ถูกต้อง</p>
   </div>
+  <div class="alert alert-error">กรุณาขอลิงก์ใหม่จากระบบแจ้งเตือน</div>
+  <button class="btn btn-close" onclick="window.close()">ปิดหน้าต่างนี้</button>
+
+  {% elif success %}
+  {# ── Claimed successfully ── #}
+  <div class="header">
+    <div class="header-icon icon-claimed">✅</div>
+    <h1>รับเคสสำเร็จ</h1>
+    <p>ระบบบันทึกการรับเคสเรียบร้อยแล้ว</p>
+  </div>
+  {% if error %}
+  <div class="alert alert-error">⚠️ {{ error }}</div>
+  {% else %}
+  <div class="alert alert-success">✅ แจ้งเตือนกลับไปยังห้อง LINE เรียบร้อยแล้ว</div>
+  {% endif %}
+  <div class="info-box">
+    <div class="info-row">
+      <span class="info-label">ผู้ป่วย</span>
+      <span class="info-value">{{ case.patient_name or '-' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">HN</span>
+      <span class="info-value">{{ case.patient_hn or '-' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">รายการ</span>
+      <span class="info-value">{{ case.item_name or '-' }}{% if case.item_value %} = <strong style="color:#dc2626">{{ case.item_value }}</strong>{% endif %}</span>
+    </div>
+  </div>
+  <div class="claimed-box">
+    <div style="font-size:.82rem;color:#64748b;">ผู้รับเคส</div>
+    <div class="name">{{ case.claimed_by or '-' }}</div>
+    <div class="time">{{ case.claimed_at }}</div>
+  </div>
+  <button class="btn btn-close" style="margin-top:20px" onclick="window.close()">ปิดหน้าต่างนี้</button>
+
+  {% elif case.status == 'CLAIMED' %}
+  {# ── Already claimed ── #}
+  <div class="header">
+    <div class="header-icon icon-claimed">✔️</div>
+    <h1>รับเคสแล้ว</h1>
+    <p>เคสนี้มีผู้รับไปแล้ว</p>
+  </div>
+  <div class="info-box">
+    <div class="info-row">
+      <span class="info-label">ผู้ป่วย</span>
+      <span class="info-value">{{ case.patient_name or '-' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">HN</span>
+      <span class="info-value">{{ case.patient_hn or '-' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">รายการ</span>
+      <span class="info-value">{{ case.item_name or '-' }}{% if case.item_value %} = <strong style="color:#dc2626">{{ case.item_value }}</strong>{% endif %}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">สถานะ</span>
+      <span class="info-value"><span class="badge badge-claimed">รับแล้ว</span></span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">ผู้รับเคส</span>
+      <span class="info-value" style="color:#15803d;font-weight:700;">{{ case.claimed_by or '-' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">รับเมื่อ</span>
+      <span class="info-value">{{ case.claimed_at }}</span>
+    </div>
+  </div>
+  <button class="btn btn-close" onclick="window.close()">ปิดหน้าต่างนี้</button>
+
+  {% else %}
+  {# ── Waiting to be claimed ── #}
+  <div class="header">
+    <div class="header-icon icon-new">🔔</div>
+    <h1>รับเคสแจ้งเตือน</h1>
+    <p>กรอกชื่อแล้วกดยืนยันเพื่อรับเคสนี้</p>
+  </div>
+  {% if error %}
+  <div class="alert alert-error">⚠️ {{ error }}</div>
+  {% endif %}
+  <div class="info-box">
+    <div class="info-row">
+      <span class="info-label">ผู้ป่วย</span>
+      <span class="info-value">{{ case.patient_name or '-' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">HN</span>
+      <span class="info-value">{{ case.patient_hn or '-' }}</span>
+    </div>
+    {% if case.department %}
+    <div class="info-row">
+      <span class="info-label">แผนก</span>
+      <span class="info-value">{{ case.department }}</span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+      <span class="info-label">รายการ</span>
+      <span class="info-value">{{ case.item_name or '-' }}{% if case.item_value %} = <strong style="color:#dc2626">{{ case.item_value }}</strong>{% endif %}</span>
+    </div>
+    {% if case.report_date_text %}
+    <div class="info-row">
+      <span class="info-label">วันที่</span>
+      <span class="info-value">{{ case.report_date_text }}{% if case.report_time_text %} {{ case.report_time_text }}{% endif %}</span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+      <span class="info-label">สถานะ</span>
+      <span class="info-value"><span class="badge badge-new">รอรับเคส</span></span>
+    </div>
+  </div>
+  <form method="post" action="/alerts/claim">
+    <input type="hidden" name="case_key" value="{{ case.case_key }}">
+    <input type="hidden" name="expires" value="{{ request.query_params.get('expires', '') }}">
+    <input type="hidden" name="sig" value="{{ request.query_params.get('sig', '') }}">
+    <div class="form-group">
+      <label class="form-label">ชื่อผู้รับเคส</label>
+      <input class="form-input" name="receiver_name" placeholder="กรอกชื่อ-นามสกุล" autocomplete="name">
+    </div>
+    <button class="btn btn-primary" type="submit">✅ ยืนยันรับเคส</button>
+  </form>
+  <button class="btn btn-secondary" onclick="window.close()">ปิดหน้าต่างนี้</button>
+  {% endif %}
+
+</div>
 </body>
 </html>
