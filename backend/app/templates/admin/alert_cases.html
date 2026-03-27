@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% macro dt(v) -%}
-{{ v.strftime('%d/%m/%Y %H:%M:%S') if v else '-' }}
+{{ v|thaidt if v else '-' }}
 {%- endmacro %}
 {% block body %}
 <div class="page-header">

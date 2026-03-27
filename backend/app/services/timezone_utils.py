@@ -32,3 +32,26 @@ def format_bangkok(dt, fmt="%d/%m/%Y %H:%M:%S"):
 
 def today_bangkok_str(fmt="%d/%m/%Y"):
     return datetime.now(BANGKOK_TZ).strftime(fmt)
+
+_THAI_MONTHS_SHORT = [
+    "", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+]
+
+def format_thai_datetime(dt, show_time=True):
+    """Return Thai-locale datetime string with Buddhist Era year.
+    e.g. '27 มี.ค. 2569 เวลา 14:30 น.'
+    """
+    local_dt = to_bangkok(dt)
+    if not local_dt:
+        return "-"
+    d = local_dt.day
+    m = _THAI_MONTHS_SHORT[local_dt.month]
+    y = local_dt.year + 543
+    if show_time:
+        t = local_dt.strftime("%H:%M")
+        return f"{d} {m} {y} เวลา {t} น."
+    return f"{d} {m} {y}"
+
+def format_thai_date(dt):
+    return format_thai_datetime(dt, show_time=False)

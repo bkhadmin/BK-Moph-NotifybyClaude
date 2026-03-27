@@ -136,8 +136,8 @@
         <td>{{ j.name }}</td>
         <td>{{ j.schedule_type }}</td>
         <td>{{ j.cron_value or j.interval_minutes or '-' }}</td>
-        <td>{{ j.next_run_at or '-' }}</td>
-        <td>{{ j.last_run_at or '-' }}</td>
+        <td>{{ j.next_run_at|thaidt if j.next_run_at else '-' }}</td>
+        <td>{{ j.last_run_at|thaidt if j.last_run_at else '-' }}</td>
         <td>{{ j.is_active }}</td>
         <td>
           <div class="page-actions">

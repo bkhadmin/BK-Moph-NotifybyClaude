@@ -17,8 +17,8 @@
         <tr>
           <td>{{ j.name }}</td>
           <td>{{ j.schedule_type }}</td>
-          <td>{{ j.next_run_at or '-' }}</td>
-          <td>{{ j.last_run_at or '-' }}</td>
+          <td>{{ j.next_run_at|thaidt if j.next_run_at else '-' }}</td>
+          <td>{{ j.last_run_at|thaidt if j.last_run_at else '-' }}</td>
           <td>{{ j.is_active }}</td>
           <td>
             <form method="post" action="/schedules/{{ j.id }}/run-now">
@@ -43,7 +43,7 @@
       <tbody>
         {% for l in schedule_logs %}
         <tr>
-          <td>{{ l.run_at }}</td>
+          <td>{{ l.run_at|thaidt if l.run_at else '-' }}</td>
           <td>{{ l.schedule_job_id }}</td>
           <td>{{ l.status }}</td>
           <td>{{ l.rows_returned or '-' }}</td>

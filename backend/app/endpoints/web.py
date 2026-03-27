@@ -6,7 +6,8 @@ def _fmt_dt(dt):
     if not dt:
         return ''
     try:
-        return format_bangkok(dt)
+        from app.services.timezone_utils import format_thai_datetime
+        return format_thai_datetime(dt)
     except Exception:
         return str(dt)
 
@@ -152,6 +153,9 @@ def _public_base_url(request: Request) -> str:
 
 router=APIRouter()
 templates=Jinja2Templates(directory='app/templates')
+from app.services.timezone_utils import format_thai_datetime, format_thai_date
+templates.env.filters['thaidt'] = format_thai_datetime
+templates.env.filters['thaidate'] = format_thai_date
 
 
 

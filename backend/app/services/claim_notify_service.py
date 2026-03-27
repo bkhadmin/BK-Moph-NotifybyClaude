@@ -1,17 +1,17 @@
 import asyncio
-from app.services.timezone_utils import format_bangkok
+from app.services.timezone_utils import format_thai_datetime
 from app.services.send_pipeline import send_with_log
 
 def build_claim_notification_text(case):
     return (
-        "รับเคสเรียบร้อย\n\n"
+        "✅ รับเคสเรียบร้อย\n\n"
         f"ผู้ป่วย: {case.patient_name or '-'}\n"
         f"HN: {case.patient_hn or '-'}\n"
         f"รายการ: {case.item_name or '-'}\n"
         f"ค่า: {case.item_value or '-'}\n"
         f"แผนก: {case.department or '-'}\n"
         f"ผู้รับเคส: {case.claimed_by or '-'}\n"
-        f"เวลารับเคส: {format_bangkok(case.claimed_at)}\n"
+        f"เวลารับเคส: {format_thai_datetime(case.claimed_at)}\n"
         f"สถานะ: รับเคสแล้ว"
     )
 

@@ -1,3 +1,6 @@
 {% macro dt(v) -%}
-{{ v.strftime('%d/%m/%Y %H:%M:%S') if v else '-' }}
+{{ v|thaidt if v else '-' }}
+{%- endmacro %}
+{% macro dtdate(v) -%}
+{{ v|thaidate if v else '-' }}
 {%- endmacro %}
