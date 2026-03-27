@@ -9,8 +9,8 @@
     <div class="muted" style="margin-top:4px;font-size:.92rem;">ติดตามการรับเคส · ว่าใครรับเคสเมื่อไร และใช้เวลากี่นาที</div>
   </div>
   <div class="page-actions">
-    <a class="btn secondary" href="/alerts/cases/export.csv{% if status_filter or alert_type_filter %}?{% endif %}{% if status_filter %}status_filter={{ status_filter }}{% endif %}{% if status_filter and alert_type_filter %}&{% endif %}{% if alert_type_filter %}alert_type_filter={{ alert_type_filter }}{% endif %}">Export CSV</a>
-    <a class="btn secondary" href="/alerts/cases/export.xlsx{% if status_filter or alert_type_filter %}?{% endif %}{% if status_filter %}status_filter={{ status_filter }}{% endif %}{% if status_filter and alert_type_filter %}&{% endif %}{% if alert_type_filter %}alert_type_filter={{ alert_type_filter }}{% endif %}">Export Excel</a>
+    <a class="btn secondary" href="/alerts/cases/export.csv?date_from={{ date_from }}&date_to={{ date_to }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if alert_type_filter %}&alert_type_filter={{ alert_type_filter }}{% endif %}">Export CSV</a>
+    <a class="btn secondary" href="/alerts/cases/export.xlsx?date_from={{ date_from }}&date_to={{ date_to }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}{% if alert_type_filter %}&alert_type_filter={{ alert_type_filter }}{% endif %}">Export Excel</a>
   </div>
 </div>
 
@@ -71,6 +71,14 @@
   <form method="get" action="/alerts/cases" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
     <div style="font-size:.85rem;font-weight:700;color:#1e3a5f;white-space:nowrap;">กรองข้อมูล:</div>
     <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:.82rem;color:#475569;white-space:nowrap;">วันที่เริ่ม</label>
+      <input type="date" name="date_from" value="{{ date_from }}" style="border:1.5px solid #c8d6ec;border-radius:6px;padding:5px 10px;font-size:.83rem;color:#1e3a5f;">
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:.82rem;color:#475569;white-space:nowrap;">ถึงวันที่</label>
+      <input type="date" name="date_to" value="{{ date_to }}" style="border:1.5px solid #c8d6ec;border-radius:6px;padding:5px 10px;font-size:.83rem;color:#1e3a5f;">
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
       <label style="font-size:.82rem;color:#475569;">ประเภท</label>
       <select name="alert_type_filter" style="border:1.5px solid #c8d6ec;border-radius:6px;padding:5px 10px;font-size:.83rem;color:#1e3a5f;">
         <option value="">ทั้งหมด</option>
@@ -88,9 +96,8 @@
       </select>
     </div>
     <button type="submit" class="btn" style="padding:6px 16px;font-size:.83rem;">กรอง</button>
-    {% if status_filter or alert_type_filter %}
-    <a href="/alerts/cases" class="btn secondary" style="padding:6px 16px;font-size:.83rem;">ล้างตัวกรอง</a>
-    {% endif %}
+    <a href="/alerts/cases?date_from={{ today }}&date_to={{ today }}" class="btn secondary" style="padding:6px 16px;font-size:.83rem;">วันนี้</a>
+    <a href="/alerts/cases?date_from=&date_to=" class="btn secondary" style="padding:6px 16px;font-size:.83rem;">ทั้งหมด</a>
   </form>
 </div>
 

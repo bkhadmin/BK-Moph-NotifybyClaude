@@ -49,6 +49,33 @@ def _alert_case_report_rows(cases):
         })
     return rows
 
+def _filter_cases_by_date(cases, date_from: str, date_to: str):
+    """Filter cases by created_at date range (YYYY-MM-DD strings, Bangkok time)."""
+    from app.services.timezone_utils import to_bangkok
+    from datetime import date as _date, datetime as _dt
+    if not date_from and not date_to:
+        return cases
+    try:
+        df = _dt.strptime(date_from, "%Y-%m-%d").date() if date_from else None
+    except Exception:
+        df = None
+    try:
+        dt_ = _dt.strptime(date_to, "%Y-%m-%d").date() if date_to else None
+    except Exception:
+        dt_ = None
+    result = []
+    for c in cases:
+        local = to_bangkok(c.created_at)
+        if not local:
+            continue
+        d = local.date()
+        if df and d < df:
+            continue
+        if dt_ and d > dt_:
+            continue
+        result.append(c)
+    return result
+
 def _alert_case_dashboard(rows):
     total = len(rows)
     claimed = len([r for r in rows if r.get('status') == 'CLAIMED'])
@@ -1312,19 +1339,24 @@ def claim_notify_settings_page(request:Request, db:Session=Depends(get_db)):
     ))
 
 @router.get('/alerts/cases')
-def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:str='', db:Session=Depends(get_db)):
+def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:str='', date_from:str='', date_to:str='', db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
-    cases = get_alert_cases(db)
+    # Default: today
+    today = bangkok_now_naive().strftime('%Y-%m-%d')
+    if not date_from and not date_to:
+        date_from = today
+        date_to = today
+    all_cases = get_alert_cases(db)
+    all_rows = _alert_case_report_rows(all_cases)
+    dashboard = _alert_case_dashboard(all_rows)
+    alert_types = sorted({r.get('alert_type') for r in all_rows if r.get('alert_type')})
+    cases = _filter_cases_by_date(all_cases, date_from, date_to)
     if status_filter:
         cases = [x for x in cases if (x.status or '') == status_filter]
     if alert_type_filter:
         cases = [x for x in cases if (x.alert_type or '') == alert_type_filter]
     rows = _alert_case_report_rows(cases)
-    all_cases = get_alert_cases(db)
-    all_rows = _alert_case_report_rows(all_cases)
-    dashboard = _alert_case_dashboard(all_rows)
-    alert_types = sorted({r.get('alert_type') for r in all_rows if r.get('alert_type')})
     return templates.TemplateResponse('admin/alert_cases.html', ctx(
         request, db, session,
         alert_case_rows=rows,
@@ -1332,13 +1364,17 @@ def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:st
         status_filter=status_filter,
         alert_type_filter=alert_type_filter,
         alert_types=alert_types,
+        date_from=date_from,
+        date_to=date_to,
+        today=today,
     ))
 
 @router.get('/alerts/cases/export.csv')
-def alert_cases_export_csv(request:Request, status_filter:str='', alert_type_filter:str='', db:Session=Depends(get_db)):
+def alert_cases_export_csv(request:Request, status_filter:str='', alert_type_filter:str='', date_from:str='', date_to:str='', db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     cases = get_alert_cases(db)
+    cases = _filter_cases_by_date(cases, date_from, date_to)
     if status_filter:
         cases = [x for x in cases if (x.status or '') == status_filter]
     if alert_type_filter:
@@ -1351,10 +1387,11 @@ def alert_cases_export_csv(request:Request, status_filter:str='', alert_type_fil
     return Response(content=content, media_type='text/csv; charset=utf-8', headers=headers)
 
 @router.get('/alerts/cases/export.xlsx')
-def alert_cases_export_xlsx(request:Request, status_filter:str='', alert_type_filter:str='', db:Session=Depends(get_db)):
+def alert_cases_export_xlsx(request:Request, status_filter:str='', alert_type_filter:str='', date_from:str='', date_to:str='', db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify')
     cases = get_alert_cases(db)
+    cases = _filter_cases_by_date(cases, date_from, date_to)
     if status_filter:
         cases = [x for x in cases if (x.status or '') == status_filter]
     if alert_type_filter:
