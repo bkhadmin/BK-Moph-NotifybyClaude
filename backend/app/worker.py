@@ -1,21 +1,15 @@
 import asyncio
 from app.db.session import SessionLocal
-from app.services.timezone_write import bangkok_now_naive
-from app.repositories.schedule_jobs import get_due_jobs, mark_ran
 from app.repositories.send_logs import get_failed_or_pending
-from app.services.job_runner import run_job
 from app.services.send_pipeline import retry_failed_log
+
+# NOTE: Scheduled job execution is handled exclusively by worker_scheduler.py
+# This worker only retries failed/pending send_logs to avoid double-sending.
 
 async def loop():
     while True:
         db = SessionLocal()
         try:
-            due = get_due_jobs(db, bangkok_now_naive())
-            for job in due:
-                result = await run_job(db, job)
-                if result:
-                    mark_ran(db, job, result["next_run_at"], result["last_run_at"])
-
             retry_rows = get_failed_or_pending(db)
             for row in retry_rows[:20]:
                 if row.retry_count < 5 and row.status in ("failed", "retrying", "pending"):
