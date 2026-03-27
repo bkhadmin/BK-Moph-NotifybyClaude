@@ -4,6 +4,7 @@ import json
 import time
 from datetime import timedelta
 
+from sqlalchemy import text
 from app.db.base import Base
 from app.db.session import SessionLocal, engine
 from app.repositories.schedule_jobs import get_due_jobs, get_by_id, update_item
