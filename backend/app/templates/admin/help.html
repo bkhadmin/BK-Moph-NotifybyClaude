@@ -196,25 +196,169 @@
   <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กด <strong>"ส่ง Auto Flex"</strong> ระบบจะรัน query จริงแล้วส่ง</div></div>
 </div>
 
-{# 7 ── Alert Type Configs ── #}
+{# 7 ── Alert Type Configs (Full Workflow) ── #}
 <div class="help-section" id="alert-type-configs">
   <div class="help-section-title">
     <div class="help-section-icon" style="background:#eff6ff;">⚙️</div>
-    <h2>7. Alert Type Configs</h2>
+    <h2>7. Alert Type Configs — ขั้นตอนสร้างการแจ้งเตือนใหม่ตั้งแต่ต้น</h2>
   </div>
-  <p>กำหนดประเภทการแจ้งเตือนต่างๆ เช่น <code>lab_critical</code>, <code>drug_critical</code> แต่ละประเภทมีการตั้งค่าเป็นของตัวเอง</p>
-  <table class="help-table">
-    <thead><tr><th>Field</th><th>ความหมาย</th><th>ตัวอย่าง</th></tr></thead>
-    <tbody>
-      <tr><td>Type Code</td><td>รหัสอ้างอิงในระบบ</td><td><code>lab_critical</code></td></tr>
-      <tr><td>Display Name</td><td>ชื่อที่แสดงในหน้าจอ</td><td>ผลแล็บวิกฤต</td></tr>
-      <tr><td>Bubble Title</td><td>ชื่อหัว Bubble LINE รองรับ <code>{field}</code></td><td><code>🔴 {lab_items_name}</code></td></tr>
-      <tr><td>Bubble Color</td><td>สีหัว Bubble (HEX)</td><td><code>#DC2626</code></td></tr>
-      <tr><td>Required Fields</td><td>ชื่อ field ที่ต้องมีในข้อมูล (JSON array)</td><td><code>["hn","lab_items_name"]</code></td></tr>
-      <tr><td>Key Fields</td><td>Field ที่ใช้ dedup ไม่ส่งซ้ำ (JSON array)</td><td><code>["hn","lab_order_number"]</code></td></tr>
-    </tbody>
-  </table>
-  <div class="help-note">หาก <strong>Bubble Title</strong> ใส่ <code>{field}</code> เช่น <code>{lab_items_name}</code> ระบบจะดึงค่าจากข้อมูลแถวนั้นมาแสดงแทนให้อัตโนมัติ</div>
+
+  <p>การสร้างการแจ้งเตือนประเภทใหม่ (เช่น ยาวิกฤต, ยาซ้ำซ้อน, ผลแล็บวิกฤต) ต้องทำตามลำดับ <strong>4 ขั้นตอน</strong> ดังนี้</p>
+
+  <div style="background:#f8fafc;border:1.5px solid #e5e7eb;border-radius:12px;padding:16px 20px;margin:12px 0 20px;display:flex;gap:0;overflow:hidden;">
+    <div style="flex:1;text-align:center;padding:10px 8px;border-right:1px solid #e5e7eb;">
+      <div style="font-size:1.4rem;">🔍</div>
+      <div style="font-size:.78rem;font-weight:800;color:#1e3a5f;margin-top:4px;">1. สร้าง Query</div>
+      <div style="font-size:.72rem;color:#64748b;">Approved Queries</div>
+    </div>
+    <div style="flex:1;text-align:center;padding:10px 8px;border-right:1px solid #e5e7eb;">
+      <div style="font-size:1.4rem;">⚙️</div>
+      <div style="font-size:.78rem;font-weight:800;color:#1e3a5f;margin-top:4px;">2. สร้าง Config</div>
+      <div style="font-size:.72rem;color:#64748b;">Alert Type Configs</div>
+    </div>
+    <div style="flex:1;text-align:center;padding:10px 8px;border-right:1px solid #e5e7eb;">
+      <div style="font-size:1.4rem;">🎨</div>
+      <div style="font-size:.78rem;font-weight:800;color:#1e3a5f;margin-top:4px;">3. สร้าง Template</div>
+      <div style="font-size:.72rem;color:#64748b;">Claim Alert Builder</div>
+    </div>
+    <div style="flex:1;text-align:center;padding:10px 8px;">
+      <div style="font-size:1.4rem;">⏱️</div>
+      <div style="font-size:.78rem;font-weight:800;color:#1e3a5f;margin-top:4px;">4. ตั้ง Schedule</div>
+      <div style="font-size:.72rem;color:#64748b;">Schedules</div>
+    </div>
+  </div>
+
+  {# Step 1 #}
+  <div style="border-left:4px solid #2563eb;padding-left:16px;margin:20px 0 12px;">
+    <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;margin-bottom:10px;">ขั้นตอนที่ 1 — สร้าง Approved Query</div>
+    <p>ไปที่เมนู <strong>Approved Queries</strong> → กดปุ่ม <strong>"เพิ่ม Query ใหม่"</strong></p>
+    <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กรอก <strong>ชื่อ Query</strong> ที่สื่อความหมาย เช่น <code>drug_critical_egfr</code></div></div>
+    <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">เขียน <strong>SQL SELECT</strong> ที่ดึงข้อมูลจาก HOSxP — ต้องมี column ที่จะใช้ใน Alert ทุกตัว เช่น <code>hn</code>, <code>ptname</code>, <code>drug_name</code>, <code>egfr</code></div></div>
+    <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กด <strong>"Preview"</strong> เพื่อดูผลลัพธ์จริงจาก HOSxP — ตรวจสอบชื่อ column ที่ได้ออกมา เพราะจะต้องใช้ในขั้นตอนที่ 2</div></div>
+    <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">กด <strong>"บันทึก"</strong></div></div>
+    <div class="help-note warn">จดชื่อ column ที่ได้จาก Preview ไว้ก่อน เช่น <code>hn</code>, <code>ptname</code>, <code>drug_name</code>, <code>egfr</code>, <code>result</code>, <code>vstdate</code> เพราะต้องใช้ในขั้นตอนถัดไป</div>
+  </div>
+
+  {# Step 2 #}
+  <div style="border-left:4px solid #7c3aed;padding-left:16px;margin:20px 0 12px;">
+    <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;margin-bottom:10px;">ขั้นตอนที่ 2 — สร้าง Alert Type Config</div>
+    <p>ไปที่เมนู <strong>Alert Type Configs</strong> → กรอกฟอร์มด้านซ้าย</p>
+    <table class="help-table" style="margin-top:8px;">
+      <thead><tr><th>Field</th><th>คืออะไร</th><th>ตัวอย่าง</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Type Code</strong></td>
+          <td>รหัสอ้างอิงในระบบ — <em>ห้ามซ้ำ ห้ามมีช่องว่าง</em></td>
+          <td><code>drug_critical_egfr</code></td>
+        </tr>
+        <tr>
+          <td><strong>Display Name</strong></td>
+          <td>ชื่อที่แสดงในหน้าจอ</td>
+          <td><code>ยา Metformin เกินขนาด eGFR ต่ำ</code></td>
+        </tr>
+        <tr>
+          <td><strong>Bubble Title</strong></td>
+          <td>ข้อความหัว bubble — รองรับ <code>{column}</code> เพื่อดึงค่าจากข้อมูลจริง</td>
+          <td><code>💊 {drug_name}</code></td>
+        </tr>
+        <tr>
+          <td><strong>Bubble Title Color</strong></td>
+          <td>สีหัว bubble (HEX code)</td>
+          <td><code>#DC2626</code> (แดง)</td>
+        </tr>
+        <tr>
+          <td><strong>Required Fields</strong></td>
+          <td>JSON array — ชื่อ column ที่ต้องมีค่าในแต่ละ row ถ้าไม่มีจะข้ามแถวนั้น</td>
+          <td><code>["hn","ptname","drug_name","egfr"]</code></td>
+        </tr>
+        <tr>
+          <td><strong>Key Fields</strong></td>
+          <td>JSON array — column ที่ใช้สร้าง key ป้องกันส่งซ้ำ (dedup) ควรรวม column ที่ระบุตัวเคสได้แน่นอน</td>
+          <td><code>["hn","drug_name","vstdate"]</code></td>
+        </tr>
+        <tr>
+          <td><strong>Field Map</strong></td>
+          <td>JSON object — map ชื่อ standard ของระบบ → ชื่อ column จริงใน query ใช้สร้าง header ของ bubble และ claim notify template</td>
+          <td><pre style="margin:4px 0;font-size:.75rem;">{"patient_hn":"hn",
+"patient_name":"ptname",
+"department":"cur_dep",
+"doctor":"doctor_name"}</pre></td>
+        </tr>
+        <tr>
+          <td><strong>Display Lines</strong></td>
+          <td>JSON array — กำหนดบรรทัดเนื้อหาใน bubble ใช้ <code>{column}</code> แทนค่าจริง รองรับ <code>size</code>, <code>weight</code>, <code>color</code>, <code>bold</code></td>
+          <td><pre style="margin:4px 0;font-size:.75rem;">[
+{"text":"eGFR: {egfr}"},
+{"text":"⚠️ {result}",
+ "weight":"bold",
+ "color":"#DC2626"}
+]</pre></td>
+        </tr>
+        <tr>
+          <td><strong>Claim Notify Template</strong></td>
+          <td>ข้อความส่งกลับ LINE หลังรับเคส — ว่างได้ จะใช้ค่า default รองรับตัวแปร <code>{patient_name}</code>, <code>{patient_hn}</code>, <code>{claimed_by}</code>, <code>{claimed_at}</code></td>
+          <td><code>✅ รับเคส {patient_name} แล้ว โดย {claimed_by}</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="help-note" style="margin-top:12px;">
+      <strong>โครงสร้าง bubble ที่ได้:</strong><br>
+      <code>[ Bubble Title ]</code> ← จาก bubble_title (รองรับ {column})<br>
+      <code>[ ชื่อผู้ป่วย ]</code> ← จาก field_map → patient_name<br>
+      <code>[ HN | แผนก ]</code> ← จาก field_map → patient_hn + department<br>
+      <code>──────────────</code><br>
+      <code>[ Display Lines... ]</code> ← แสดงตาม display_lines ที่กำหนด<br>
+      <code>[ แพทย์ผู้สั่ง ]</code> ← จาก field_map → doctor<br>
+      <code>[ สถานะเคส ]</code><br>
+      <code>[ ปุ่มรับเคส ]</code>
+    </div>
+    <div class="help-note warn" style="margin-top:8px;">
+      <strong>ข้อสำคัญ:</strong> Field Map ต้องเป็น JSON <em>object</em> <code>{}</code> เท่านั้น | Display Lines ต้องเป็น JSON <em>array</em> <code>[]</code> เท่านั้น — อย่าสลับกัน
+    </div>
+  </div>
+
+  {# Step 3 #}
+  <div style="border-left:4px solid #059669;padding-left:16px;margin:20px 0 12px;">
+    <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;margin-bottom:10px;">ขั้นตอนที่ 3 — สร้าง Claim Alert Template</div>
+    <p>ไปที่เมนู <strong>Alert Type Configs</strong> → กดปุ่ม <strong>"สร้าง Claim Alert Template"</strong> (มุมขวาบน)</p>
+    <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กรอก <strong>ชื่อ Template</strong> เช่น <code>แจ้งเตือนการใช้ metformin เกินขนาด</code></div></div>
+    <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">เลือก <strong>Alert Type</strong> จาก dropdown — เลือก Config ที่สร้างในขั้นตอนที่ 2</div></div>
+    <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กด <strong>"บันทึก"</strong> — ระบบจะสร้าง Template ชนิด <code>claim_alert</code> พร้อม content <code>{"alert_type_code": "..."}</code> ให้อัตโนมัติ</div></div>
+    <div class="help-note tip">Template ชนิด <code>claim_alert</code> ไม่ต้องเขียน Flex JSON เอง — ระบบจะ render bubble จาก Alert Type Config โดยอัตโนมัติ</div>
+  </div>
+
+  {# Step 4 #}
+  <div style="border-left:4px solid #d97706;padding-left:16px;margin:20px 0 12px;">
+    <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;margin-bottom:10px;">ขั้นตอนที่ 4 — ตั้ง Schedule</div>
+    <p>ไปที่เมนู <strong>Schedules</strong> → กดปุ่ม <strong>"เพิ่ม Schedule ใหม่"</strong></p>
+    <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กรอก <strong>Job Name</strong> เช่น <code>drug_critical_egfr_notify</code></div></div>
+    <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">เลือก <strong>Template</strong> = Template ที่สร้างในขั้นตอนที่ 3</div></div>
+    <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">เลือก <strong>Query</strong> = Query ที่สร้างในขั้นตอนที่ 1</div></div>
+    <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">เลือก <strong>Notify Room</strong> = ห้อง LINE ที่จะรับการแจ้งเตือน</div></div>
+    <div class="help-step"><div class="help-step-num">5</div><div class="help-step-body">ตั้ง <strong>Cron Expression</strong> เช่น <code>*/15 * * * *</code> = ทุก 15 นาที</div></div>
+    <div class="help-step"><div class="help-step-num">6</div><div class="help-step-body">กด <strong>"บันทึก"</strong> แล้วไปที่ <strong>Scheduler Monitor</strong> → กด <strong>"Run Now"</strong> เพื่อทดสอบทันที</div></div>
+    <table class="help-table" style="margin-top:12px;">
+      <thead><tr><th>Cron Expression</th><th>ความหมาย</th></tr></thead>
+      <tbody>
+        <tr><td><code>*/5 * * * *</code></td><td>ทุก 5 นาที</td></tr>
+        <tr><td><code>*/15 * * * *</code></td><td>ทุก 15 นาที</td></tr>
+        <tr><td><code>0 * * * *</code></td><td>ทุกชั่วโมง (นาทีที่ 0)</td></tr>
+        <tr><td><code>0 8 * * *</code></td><td>ทุกวัน เวลา 08:00 น.</td></tr>
+        <tr><td><code>0 8,12,16 * * *</code></td><td>วันละ 3 ครั้ง 08:00, 12:00, 16:00 น.</td></tr>
+      </tbody>
+    </table>
+    <div class="help-note warn" style="margin-top:10px;">ถ้าข้อมูลเคสเดิมถูกส่งแล้ว (Key Fields ตรงกัน) ระบบจะ <strong>ไม่ส่งซ้ำ</strong> — เฉพาะเคสใหม่เท่านั้นที่จะถูกส่ง</div>
+  </div>
+
+  {# Summary #}
+  <div class="help-note tip" style="margin-top:16px;">
+    <strong>สรุปการเชื่อมกัน:</strong><br>
+    <strong>Query</strong> → ดึงข้อมูลจาก HOSxP &nbsp;|&nbsp;
+    <strong>Alert Type Config</strong> → กำหนดรูปแบบ bubble &nbsp;|&nbsp;
+    <strong>Template</strong> → ผูก Config กับชื่อ Template &nbsp;|&nbsp;
+    <strong>Schedule</strong> → รัน Query + Template อัตโนมัติตามเวลา → ส่ง LINE
+  </div>
 </div>
 
 {# 8 ── Claim Notify ── #}
