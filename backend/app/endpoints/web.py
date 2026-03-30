@@ -46,6 +46,7 @@ def _alert_case_report_rows(cases):
             'sent_count': c.sent_count or 0,
             'claim_notify_sent_at': _fmt_dt(getattr(c, 'claim_notify_sent_at', None)),
             'claim_notify_status': getattr(c, 'claim_notify_status', '') or '',
+            'source_row_json': c.source_row_json or '',
         })
     return rows
 

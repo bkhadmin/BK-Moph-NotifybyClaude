@@ -3,6 +3,18 @@
 {{ v|thaidt if v else '-' }}
 {%- endmacro %}
 {% block body %}
+<style>
+.detail-row { background:#f8fafc; }
+.detail-row td { padding:0 !important; }
+.detail-panel { padding:12px 18px 14px; font-size:.82rem; display:none; }
+.detail-panel.open { display:block; }
+.detail-fields { display:flex; flex-wrap:wrap; gap:6px 20px; }
+.detail-field { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:5px 12px; }
+.detail-field .dk { font-size:.72rem; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.detail-field .dv { font-size:.85rem; color:#0f172a; font-weight:600; margin-top:1px; }
+.btn-detail { background:none; border:1.5px solid #c8d6ec; border-radius:6px; padding:4px 10px; font-size:.78rem; color:#2563eb; cursor:pointer; white-space:nowrap; }
+.btn-detail:hover { background:#eff6ff; }
+</style>
 <div class="page-header">
   <div>
     <h1 class="page-title">Alert Cases Dashboard</h1>
@@ -101,6 +113,63 @@
   </form>
 </div>
 
+{# ── Summary by item_name ── #}
+{% if alert_case_rows %}
+{% set item_counts = {} %}
+{% for r in alert_case_rows %}
+  {% if r.item_name %}
+    {% set key = r.item_name %}
+    {% if key not in item_counts %}
+      {% set _ = item_counts.update({key: {'total': 0, 'claimed': 0, 'pending': 0}}) %}
+    {% endif %}
+    {% set _ = item_counts[key].update({'total': item_counts[key].total + 1}) %}
+    {% if r.status == 'CLAIMED' %}
+      {% set _ = item_counts[key].update({'claimed': item_counts[key].claimed + 1}) %}
+    {% else %}
+      {% set _ = item_counts[key].update({'pending': item_counts[key].pending + 1}) %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{% if item_counts %}
+<div class="card mt-4" style="padding:18px 22px;">
+  <div style="font-size:.9rem;font-weight:800;color:#1e3a5f;margin-bottom:12px;">สรุปตามรายการ (item)</div>
+  <div class="table-wrap">
+  <table class="table" style="font-size:.83rem;">
+    <thead>
+      <tr>
+        <th>รายการ</th>
+        <th style="text-align:center;">ทั้งหมด</th>
+        <th style="text-align:center;">รับแล้ว</th>
+        <th style="text-align:center;">รอรับ</th>
+        <th style="text-align:center;">% รับเคส</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for name, c in item_counts.items()|sort(attribute='1.total', reverse=True) %}
+      <tr>
+        <td style="font-weight:600;">{{ name }}</td>
+        <td style="text-align:center;font-weight:800;color:#1e3a5f;">{{ c.total }}</td>
+        <td style="text-align:center;font-weight:700;color:#16a34a;">{{ c.claimed }}</td>
+        <td style="text-align:center;font-weight:700;color:#dc2626;">{{ c.pending }}</td>
+        <td style="text-align:center;">
+          {% if c.total > 0 %}
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="flex:1;background:#e2e8f0;border-radius:999px;height:6px;overflow:hidden;">
+              <div style="width:{{ (c.claimed / c.total * 100)|int }}%;background:#16a34a;height:100%;border-radius:999px;"></div>
+            </div>
+            <span style="font-size:.78rem;font-weight:700;color:#374151;white-space:nowrap;">{{ (c.claimed / c.total * 100)|int }}%</span>
+          </div>
+          {% else %}-{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
 {# ── Case table ── #}
 <div class="card mt-4">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap;">
@@ -164,11 +233,35 @@
         <td style="text-align:center;">{{ r.sent_count or 0 }}</td>
         <td>
           <div class="page-actions" style="gap:6px;">
+            {% if r.source_row_json %}
+            <button class="btn-detail" onclick="toggleDetail({{ r.id }})">🔍 รายละเอียด</button>
+            {% endif %}
             <a class="btn secondary" href="/alerts/cases/{{ r.id }}/edit" style="padding:6px 12px;font-size:.82rem;">แก้ไข</a>
             <a class="btn danger" href="/alerts/cases/{{ r.id }}/delete" onclick="return confirm('ยืนยันลบเคสนี้?')" style="padding:6px 12px;font-size:.82rem;">ลบ</a>
           </div>
         </td>
       </tr>
+      {% if r.source_row_json %}
+      <tr class="detail-row" id="detail-{{ r.id }}">
+        <td colspan="14">
+          <div class="detail-panel" id="panel-{{ r.id }}">
+            {% set raw = r.source_row_json | from_json_safe %}
+            {% if raw %}
+            <div class="detail-fields">
+              {% for k, v in raw.items() %}
+              {% if v is not none and v != '' and not k.startswith('claim_') and k not in ('case_key','case_status','case_status_text','claim_url') %}
+              <div class="detail-field">
+                <div class="dk">{{ k }}</div>
+                <div class="dv">{{ v }}</div>
+              </div>
+              {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endif %}
       {% else %}
       <tr><td colspan="14" class="muted" style="text-align:center;padding:24px;">ไม่มีข้อมูลเคส</td></tr>
       {% endfor %}
@@ -176,4 +269,10 @@
   </table>
   </div>
 </div>
+<script>
+function toggleDetail(id) {
+  var panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.toggle('open');
+}
+</script>
 {% endblock %}
