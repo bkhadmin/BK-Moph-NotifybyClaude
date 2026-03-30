@@ -41,8 +41,9 @@ def build_claim_alert_carousel(rows: list, cfg: dict) -> list:
         report_time  = _get_field(row, fm, "report_time")
         doctor       = _get_field(row, fm, "doctor")
 
+        row_title = _render_line(title, row)
         contents = [
-            {"type": "text", "text": title, "weight": "bold", "size": "lg",
+            {"type": "text", "text": row_title, "weight": "bold", "size": "lg",
              "wrap": True, "color": title_color},
         ]
         if patient_name:

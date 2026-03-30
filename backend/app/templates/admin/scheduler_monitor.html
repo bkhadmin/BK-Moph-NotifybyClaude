@@ -1,60 +1,233 @@
 {% extends "base.html" %}
 {% block body %}
+<style>
+/* ── layout ── */
+.sm-grid2 { display:grid; grid-template-columns:520px 1fr; gap:20px; align-items:start; }
+@media(max-width:960px){ .sm-grid2 { grid-template-columns:1fr; } }
+
+/* ── stat bar ── */
+.sm-stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.sm-stat { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px;
+  padding:14px 20px; flex:1; min-width:110px; }
+.sm-stat .val { font-size:1.5rem; font-weight:900; color:#1e3a5f; line-height:1; }
+.sm-stat .lbl { font-size:.72rem; font-weight:700; color:#94a3b8;
+  text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+.sm-stat.success .val { color:#16a34a; }
+.sm-stat.danger  .val { color:#dc2626; }
+.sm-stat.warn    .val { color:#d97706; }
+
+/* ── job cards ── */
+.job-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px;
+  padding:16px 18px; margin-bottom:12px; position:relative; overflow:hidden; }
+.job-card.active { border-left:4px solid #16a34a; }
+.job-card.inactive { border-left:4px solid #d1d5db; opacity:.75; }
+.job-card h4 { font-size:.9rem; font-weight:800; color:#1e3a5f; margin:0 0 6px; }
+.job-meta { font-size:.75rem; color:#64748b; display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:10px; }
+.job-meta span { display:flex; align-items:center; gap:3px; }
+.job-times { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.job-time-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;
+  padding:7px 10px; font-size:.73rem; }
+.job-time-box .tl { color:#94a3b8; font-weight:700; text-transform:uppercase;
+  letter-spacing:.03em; margin-bottom:2px; }
+.job-time-box .tv { color:#1e3a5f; font-weight:700; }
+.job-actions { display:flex; gap:8px; }
+.sm-btn { padding:7px 14px; border:0; border-radius:8px; font-size:.78rem;
+  font-weight:700; cursor:pointer; transition:opacity .15s; text-decoration:none;
+  display:inline-flex; align-items:center; gap:4px; }
+.sm-btn:hover { opacity:.85; }
+.sm-btn.primary { background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; }
+.sm-btn.secondary { background:#f1f5f9; color:#334155; }
+.sm-btn.green { background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; }
+.badge-active { display:inline-block; background:#dcfce7; color:#166534;
+  border-radius:999px; padding:1px 8px; font-size:.7rem; font-weight:700; }
+.badge-inactive { display:inline-block; background:#f1f5f9; color:#94a3b8;
+  border-radius:999px; padding:1px 8px; font-size:.7rem; font-weight:700; }
+.badge-cron { display:inline-block; background:#eff6ff; color:#1d4ed8;
+  border-radius:6px; padding:1px 7px; font-size:.7rem; font-weight:700; font-family:monospace; }
+
+/* ── log table ── */
+.log-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px;
+  padding:18px 20px; position:sticky; top:16px; }
+.log-card h3 { font-size:.95rem; font-weight:800; color:#1e3a5f; margin:0 0 14px; }
+.log-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+.log-table th { background:#f8fafc; color:#94a3b8; font-size:.68rem;
+  text-transform:uppercase; letter-spacing:.05em; padding:7px 10px;
+  text-align:left; border-bottom:1.5px solid #e5e7eb; white-space:nowrap; }
+.log-table td { padding:8px 10px; border-bottom:1px solid #f1f5f9;
+  vertical-align:top; color:#1e3a5f; }
+.log-table tr:last-child td { border-bottom:none; }
+.log-table tr:hover td { background:#f8fafc; }
+.ls-success { display:inline-block; background:#dcfce7; color:#166534;
+  border-radius:6px; padding:2px 8px; font-weight:700; font-size:.72rem; }
+.ls-error   { display:inline-block; background:#fee2e2; color:#991b1b;
+  border-radius:6px; padding:2px 8px; font-weight:700; font-size:.72rem; }
+.ls-skip    { display:inline-block; background:#f1f5f9; color:#94a3b8;
+  border-radius:6px; padding:2px 8px; font-weight:700; font-size:.72rem; }
+.ls-other   { display:inline-block; background:#fef3c7; color:#92400e;
+  border-radius:6px; padding:2px 8px; font-weight:700; font-size:.72rem; }
+.err-tip { color:#dc2626; font-size:.7rem; max-width:200px;
+  word-break:break-all; margin-top:2px; }
+.job-name-pill { display:inline-block; background:#eff6ff; color:#1d4ed8;
+  border-radius:5px; padding:1px 6px; font-size:.7rem; font-weight:700;
+  white-space:nowrap; max-width:130px; overflow:hidden; text-overflow:ellipsis; }
+.refresh-bar { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.refresh-info { font-size:.75rem; color:#94a3b8; }
+</style>
+
 <div class="page-header">
-  <h1 class="page-title">Scheduler Monitor</h1>
-  <div class="muted">Module 30: run now + retry policy + production monitor</div>
+  <div>
+    <h1 class="page-title">Scheduler Monitor</h1>
+    <div class="muted">ติดตามสถานะ jobs และ log การทำงาน</div>
+  </div>
+  <div class="page-actions">
+    <a href="/schedules" class="btn secondary">จัดการ Schedule</a>
+    <a href="/scheduler-monitor" class="btn secondary">🔄 Refresh</a>
+  </div>
 </div>
 
-<div class="grid-2 mt-6">
-  <div class="card">
-    <h3>Jobs</h3>
-    <table class="table mt-4">
+{# ── Stats bar ── #}
+{% set total_jobs = (jobs or [])|length %}
+{% set active_jobs = (jobs or [])|selectattr('is_active','eq','Y')|list|length %}
+{% set logs = schedule_logs or [] %}
+{% set success_logs = logs|selectattr('status','eq','success')|list|length %}
+{% set error_logs = logs|selectattr('status','eq','error')|list|length %}
+{% set total_sent = namespace(n=0) %}
+{% for l in logs %}{% set total_sent.n = total_sent.n + (l.sent_count or 0) %}{% endfor %}
+
+<div class="sm-stats">
+  <div class="sm-stat">
+    <div class="val">{{ total_jobs }}</div>
+    <div class="lbl">Total Jobs</div>
+  </div>
+  <div class="sm-stat success">
+    <div class="val">{{ active_jobs }}</div>
+    <div class="lbl">Active</div>
+  </div>
+  <div class="sm-stat success">
+    <div class="val">{{ success_logs }}</div>
+    <div class="lbl">Success (100 ล่าสุด)</div>
+  </div>
+  <div class="sm-stat {% if error_logs > 0 %}danger{% else %}success{% endif %}">
+    <div class="val">{{ error_logs }}</div>
+    <div class="lbl">Error (100 ล่าสุด)</div>
+  </div>
+  <div class="sm-stat">
+    <div class="val">{{ total_sent.n }}</div>
+    <div class="lbl">ส่งแล้ว (100 ล่าสุด)</div>
+  </div>
+</div>
+
+{# ── build job lookup map for log table ── #}
+{% set job_map = {} %}
+{% for j in jobs or [] %}{% set _ = job_map.update({j.id: j.name}) %}{% endfor %}
+
+<div class="sm-grid2">
+
+  {# ── LEFT: Job cards ── #}
+  <div>
+    {% for j in jobs or [] %}
+    <div class="job-card {{ 'active' if j.is_active == 'Y' else 'inactive' }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <h4>{{ j.name }}</h4>
+        {% if j.is_active == 'Y' %}
+        <span class="badge-active">● Active</span>
+        {% else %}
+        <span class="badge-inactive">Inactive</span>
+        {% endif %}
+      </div>
+
+      <div class="job-meta">
+        <span>
+          {% if j.schedule_type == 'cron' %}
+          ⏰ <span class="badge-cron">{{ j.cron_value or 'cron' }}</span>
+          {% elif j.schedule_type == 'interval' %}
+          🔁 ทุก {{ j.interval_minutes }} นาที
+          {% else %}
+          📌 {{ j.schedule_type }}
+          {% endif %}
+        </span>
+        {% if j.notify_room_id %}
+        <span>🔔 Room #{{ j.notify_room_id }}</span>
+        {% endif %}
+      </div>
+
+      <div class="job-times">
+        <div class="job-time-box">
+          <div class="tl">Next Run</div>
+          <div class="tv">{{ j.next_run_at|thaidt if j.next_run_at else '—' }}</div>
+        </div>
+        <div class="job-time-box">
+          <div class="tl">Last Run</div>
+          <div class="tv">{{ j.last_run_at|thaidt if j.last_run_at else '—' }}</div>
+        </div>
+      </div>
+
+      <div class="job-actions">
+        <form method="post" action="/schedules/{{ j.id }}/run-now" style="margin:0">
+          <button class="sm-btn green">▶ Run Now</button>
+        </form>
+        <a href="/schedules?edit_id={{ j.id }}" class="sm-btn secondary">✏ Edit</a>
+      </div>
+    </div>
+    {% else %}
+    <div style="color:#94a3b8;font-size:.85rem;padding:20px 0;">ยังไม่มี Job</div>
+    {% endfor %}
+  </div>
+
+  {# ── RIGHT: Log table ── #}
+  <div class="log-card">
+    <h3>Run Logs <span style="font-size:.75rem;font-weight:400;color:#94a3b8;">100 รายการล่าสุด</span></h3>
+    <table class="log-table">
       <thead>
-        <tr><th>Name</th><th>Type</th><th>Next Run</th><th>Last Run</th><th>Status</th><th>Action</th></tr>
+        <tr>
+          <th>เวลา</th>
+          <th>Job</th>
+          <th>Status</th>
+          <th>Rows</th>
+          <th>Sent</th>
+          <th>Error</th>
+        </tr>
       </thead>
       <tbody>
-        {% for j in jobs %}
+        {% for l in schedule_logs or [] %}
         <tr>
-          <td>{{ j.name }}</td>
-          <td>{{ j.schedule_type }}</td>
-          <td>{{ j.next_run_at|thaidt if j.next_run_at else '-' }}</td>
-          <td>{{ j.last_run_at|thaidt if j.last_run_at else '-' }}</td>
-          <td>{{ j.is_active }}</td>
+          <td style="white-space:nowrap;color:#64748b;">
+            {{ l.run_at|thaidt if l.run_at else '—' }}
+          </td>
           <td>
-            <form method="post" action="/schedules/{{ j.id }}/run-now">
-              <button class="btn secondary">Run Now</button>
-            </form>
-            <a href="/schedules?edit_id={{ j.id }}" class="btn secondary">Edit</a>
+            <span class="job-name-pill" title="{{ job_map.get(l.schedule_job_id, '#'+l.schedule_job_id|string) }}">
+              {{ job_map.get(l.schedule_job_id, '#' ~ l.schedule_job_id) }}
+            </span>
+          </td>
+          <td>
+            {% if l.status == 'success' %}
+            <span class="ls-success">✓ success</span>
+            {% elif l.status == 'error' %}
+            <span class="ls-error">✕ error</span>
+            {% elif l.status == 'skip' or l.status == 'skipped' %}
+            <span class="ls-skip">— skip</span>
+            {% else %}
+            <span class="ls-other">{{ l.status }}</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">{{ l.rows_returned if l.rows_returned is not none else '—' }}</td>
+          <td style="text-align:center;">
+            {% if l.sent_count %}
+            <strong style="color:#16a34a;">{{ l.sent_count }}</strong>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if l.error_message %}
+            <div class="err-tip">{{ l.error_message|truncate(80) }}</div>
+            {% else %}—{% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="muted">No jobs</td></tr>
+        <tr><td colspan="6" style="color:#94a3b8;padding:16px 10px;">ยังไม่มี log</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <div class="card">
-    <h3>Recent Run Logs</h3>
-    <table class="table mt-4">
-      <thead>
-        <tr><th>Run At</th><th>Job ID</th><th>Status</th><th>Rows</th><th>Sent</th><th>Error</th></tr>
-      </thead>
-      <tbody>
-        {% for l in schedule_logs %}
-        <tr>
-          <td>{{ l.run_at|thaidt if l.run_at else '-' }}</td>
-          <td>{{ l.schedule_job_id }}</td>
-          <td>{{ l.status }}</td>
-          <td>{{ l.rows_returned or '-' }}</td>
-          <td>{{ l.sent_count or '-' }}</td>
-          <td>{{ l.error_message or '-' }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6" class="muted">No logs</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
 </div>
 {% endblock %}

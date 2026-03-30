@@ -111,7 +111,12 @@ textarea.cfg-textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37
           <div class="form-col">
             <textarea class="cfg-textarea" name="display_lines" rows="5"
               id="dl_{{ cid }}"
-              placeholder='[&#10;  {"text": "ชื่อยา {drug_name}", "color": "#dc2626", "bold": true},&#10;  {"text": "ค่า EGFR = {egfr}", "color": "#dc2626", "bold": true}&#10;]'>{{ cfg.display_lines or '' }}</textarea>
+              {% if cfg.type_code == 'lab_critical' %}
+              placeholder='[&#10;  {"text": "{lab_items_name} = {lab_order_result}", "color": "#dc2626", "bold": true}&#10;]'
+              {% else %}
+              placeholder='[&#10;  {"text": "ชื่อยา {drug_name}", "color": "#dc2626", "bold": true},&#10;  {"text": "ค่า EGFR = {egfr}", "color": "#dc2626", "bold": true}&#10;]'
+              {% endif %}
+              >{{ cfg.display_lines or '' }}</textarea>
             <div class="err-hint" id="dl_err_{{ cid }}">⚠ JSON ไม่ถูกต้อง</div>
           </div>
 
@@ -167,22 +172,34 @@ textarea.cfg-textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37
   <script>
   (function(){
     var cid = {{ cid }};
-    var SAMPLE = {
+    var TYPE_CODE = '{{ cfg.type_code }}';
+    var SAMPLE_BASE = {
       patient_name: 'นายตัวอย่าง นามสกุล',
       patient_hn: '0001234',
-      item_name: 'METFORMIN 500 mg.',
-      item_value: '21.397',
       department: 'แผนกอายุรกรรม',
       claimed_by: 'พว.สมใจ ใจดี',
       claimed_at: '18 มี.ค. 2569 09:15 น.',
-      drug_name: 'METFORMIN 500 mg.',
-      egfr: '21.397',
       hn: '0001234',
       ptname: 'นายตัวอย่าง นามสกุล',
       cur_dep: 'แผนกอายุรกรรม',
-      doctor_name: 'นพ.ตัวอย่าง บุญญาภาพงษ์',
-      vstdate: '18/03/2568',
     };
+    var SAMPLE_BY_TYPE = {
+      'lab_critical': {
+        item_name: 'Creatinine', item_value: '8.5 mg/dL',
+        lab_items_name: 'Creatinine', lab_order_result: '8.5 mg/dL',
+        report_date_text: '18/03/2568', report_time_text: '08:30',
+        'แพทย์ผู้สั่ง': 'นพ.ตัวอย่าง บุญญาภาพงษ์',
+      },
+      'drug_critical': {
+        item_name: 'METFORMIN 500 mg.', item_value: '21.397',
+        drug_name: 'METFORMIN 500 mg.', egfr: '21.397',
+        doctor_name: 'นพ.ตัวอย่าง บุญญาภาพงษ์',
+        vstdate: '18/03/2568',
+      },
+    };
+    var SAMPLE = Object.assign({}, SAMPLE_BASE, SAMPLE_BY_TYPE[TYPE_CODE] || {
+      item_name: 'รายการแจ้งเตือน', item_value: 'ค่าผิดปกติ',
+    });
     var DEFAULT_NOTIFY = "✅ รับเคสเรียบร้อย\n\nผู้ป่วย: {patient_name}\nHN: {patient_hn}\nรายการ: {item_name}\nค่า: {item_value}\nแผนก: {department}\nผู้รับเคส: {claimed_by}\nเวลารับเคส: {claimed_at}\nสถานะ: รับเคสแล้ว";
 
     function tag(v) {
@@ -200,7 +217,7 @@ textarea.cfg-textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37
       var linesEl = document.getElementById('pv_lines_'+cid);
       if (!raw) {
         linesEl.innerHTML = '<div class="bubble-line" style="color:#dc2626;font-weight:700;font-size:.82rem">'
-          + tag('METFORMIN 500 mg.') + ' = ' + tag('21.397') + '</div>';
+          + tag(SAMPLE.item_name || 'รายการ') + ' = ' + tag(SAMPLE.item_value || 'ค่า') + '</div>';
         errEl.style.display='none'; return;
       }
       try {

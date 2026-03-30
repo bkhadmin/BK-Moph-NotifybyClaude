@@ -1370,7 +1370,6 @@ def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:st
         date_to = today
     all_cases = get_alert_cases(db)
     all_rows = _alert_case_report_rows(all_cases)
-    dashboard = _alert_case_dashboard(all_rows)
     alert_types = sorted({r.get('alert_type') for r in all_rows if r.get('alert_type')})
     cases = _filter_cases_by_date(all_cases, date_from, date_to)
     if status_filter:
@@ -1378,6 +1377,7 @@ def alert_cases_page(request:Request, status_filter:str='', alert_type_filter:st
     if alert_type_filter:
         cases = [x for x in cases if (x.alert_type or '') == alert_type_filter]
     rows = _alert_case_report_rows(cases)
+    dashboard = _alert_case_dashboard(rows)
     return templates.TemplateResponse('admin/alert_cases.html', ctx(
         request, db, session,
         alert_case_rows=rows,
@@ -1766,7 +1766,13 @@ def manual_claim_page(request:Request, db:Session=Depends(get_db)):
     session = require_session(request)
     require_menu(db, session, 'notify')
     try:
-        cases = list_open_alert_cases(db)
+        from app.repositories.alert_cases import get_all as _get_all_cases
+        from app.services.timezone_utils import today_bangkok_str
+        today = today_bangkok_str()
+        all_cases = _get_all_cases(db)
+        cases = [c for c in all_cases if c.created_at and str(c.created_at)[:10] == today]
+        if not cases:
+            cases = all_cases[:20]
     except Exception:
         cases = []
     return templates.TemplateResponse(

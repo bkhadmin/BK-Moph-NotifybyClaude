@@ -11,11 +11,12 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Patient</th>
+        <th>ผู้ป่วย</th>
         <th>HN</th>
-        <th>Item</th>
-        <th>Value</th>
-        <th>Department</th>
+        <th>รายการ</th>
+        <th>ค่า</th>
+        <th>แผนก</th>
+        <th>วันที่</th>
         <th>Status</th>
         <th>Action</th>
       </tr>
@@ -23,12 +24,17 @@
     <tbody>
       {% for c in alert_cases or [] %}
       <tr>
-        <td>{{ c.patient_name or c.ptname or '-' }}</td>
-        <td>{{ c.patient_hn or c.hn or '-' }}</td>
-        <td>{{ c.item_name or c.lab_items_name or '-' }}</td>
-        <td>{{ c.item_value or c.lab_order_result or '-' }}</td>
-        <td>{{ c.department or c.cur_dep or '-' }}</td>
-        <td>{{ c.claim_status or 'open' }}</td>
+        <td>{{ c.patient_name or '-' }}</td>
+        <td>{{ c.patient_hn or '-' }}</td>
+        <td>{{ c.item_name or '-' }}</td>
+        <td>{{ c.item_value or '-' }}</td>
+        <td>{{ c.department or '-' }}</td>
+        <td>{{ c.created_at|string|truncate(16,false,'') if c.created_at else '-' }}</td>
+        <td>
+          <span class="badge {% if c.status == 'CLAIMED' %}success{% else %}danger{% endif %}">
+            {{ c.status or 'OPEN' }}
+          </span>
+        </td>
         <td>
           {% if c.case_key %}
           <a class="btn" href="/alerts/claim?case_key={{ c.case_key }}">รับเคส</a>

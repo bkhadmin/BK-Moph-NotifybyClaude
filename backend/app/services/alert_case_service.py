@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from app.db.base import Base
 from app.db.session import engine
-from app.repositories.alert_cases import get_by_case_key, get_by_lab_order_number, create_item, update_item
+from app.repositories.alert_cases import get_all as get_all_alert_cases, get_by_case_key, get_by_lab_order_number, create_item, update_item
 from app.services.claim_security import build_signed_claim_url
 
 def ensure_tables():
@@ -182,17 +182,11 @@ def claim_case(db, case, receiver_name: str):
     return update_item(db, case, status="CLAIMED", claimed_by=receiver_name, claimed_at=now)
 
 def list_open_alert_cases(db):
-    rows = []
-    for fn_name in ("get_open_alert_cases", "get_unclaimed_cases", "list_cases", "get_all_cases"):
-        fn = globals().get(fn_name)
-        if callable(fn):
-            try:
-                result = fn(db)
-                if result is not None:
-                    return result
-            except Exception:
-                pass
-    return rows
+    try:
+        all_cases = get_all_alert_cases(db)
+        return [c for c in all_cases if (c.status or '').upper() != 'CLAIMED']
+    except Exception:
+        return []
 
 def mark_alert_case_sent(db, case_key=None, lab_order_number=None):
     try:
