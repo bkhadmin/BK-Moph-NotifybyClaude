@@ -23,8 +23,18 @@ def _render_template(template: str, variables: dict) -> str:
 
 
 def build_claim_notification_text(case, claim_notify_template: str = "") -> str:
+    import json as _json
     template = claim_notify_template.strip() if claim_notify_template else _DEFAULT_TEMPLATE
-    variables = {
+    # เริ่มจาก raw row ทั้งหมด เพื่อรองรับ custom column เช่น {shortlist}, {qty}, {result}
+    variables: dict = {}
+    try:
+        src = getattr(case, "source_row_json", None)
+        if src:
+            variables.update({k: str(v) if v is not None else "-" for k, v in _json.loads(src).items()})
+    except Exception:
+        pass
+    # standard fields override ค่า raw (ใช้ค่าที่ normalize แล้ว)
+    variables.update({
         "patient_name": case.patient_name or "-",
         "patient_hn":   case.patient_hn or "-",
         "item_name":    case.item_name or "-",
@@ -33,7 +43,7 @@ def build_claim_notification_text(case, claim_notify_template: str = "") -> str:
         "claimed_by":   case.claimed_by or "-",
         "claimed_at":   format_thai_datetime(case.claimed_at),
         "alert_type":   getattr(case, "alert_type", "-") or "-",
-    }
+    })
     return _render_template(template, variables)
 
 
