@@ -132,7 +132,7 @@ def ensure_case_for_row(db, row: dict, alert_cfg: dict | None = None):
         report_date_text=_text(row.get(fm.get("report_date", "report_date_text")) or row.get("report_date_text")),
         report_time_text=_text(row.get(fm.get("report_time", "report_time_text")) or row.get("report_time_text")),
         status="NEW",
-        source_row_json=json.dumps(row, ensure_ascii=False, default=str),
+        source_row_json=json.dumps(row, ensure_ascii=False, default=lambda v: v.decode('utf-8', errors='replace') if isinstance(v, bytes) else str(v)),
     )
     return case
 
