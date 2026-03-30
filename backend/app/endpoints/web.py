@@ -410,6 +410,11 @@ async def system_connections(request:Request, db:Session=Depends(get_db)):
         notify_result = {"status": "failed", "detail": str(exc)}
     return templates.TemplateResponse('admin/system_connections.html', ctx(request, db, session, hosxp_result=hosxp_result, provider_result=provider_result, notify_result=notify_result))
 
+@router.get('/help')
+def help_page(request:Request, db:Session=Depends(get_db)):
+    session=require_session(request)
+    return templates.TemplateResponse('admin/help.html', ctx(request, db, session))
+
 @router.get('/reports')
 def reports_page(request:Request, db:Session=Depends(get_db)):
     session=require_session(request)

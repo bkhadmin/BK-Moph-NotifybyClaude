@@ -1,15 +1,185 @@
 {% extends "base.html" %}
 {% block body %}
-<div class="p-6">
-  <h1 class="text-2xl font-bold">Media Library</h1>
-  <form method="post" action="/media" enctype="multipart/form-data" class="card mt-6">
-    <input type="file" name="image" class="input">
-    <button class="btn mt-4">Upload & Resize</button>
-  </form>
-  <div class="card mt-6">
-    {% for m in media_files %}
-      <div class="item"><a href="{{ m.public_url }}" target="_blank">{{ m.original_name }}</a> | {{ m.width }}x{{ m.height }}</div>
-    {% else %}<div class="muted">No media</div>{% endfor %}
+<style>
+.media-upload-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px; padding:22px 24px; }
+.media-upload-card h3 { font-size:.88rem; font-weight:800; color:#1e3a5f; margin:0 0 14px; }
+.media-drop { border:2px dashed #cbd5e1; border-radius:12px; padding:28px 20px; text-align:center; color:#94a3b8; font-size:.85rem; cursor:pointer; transition:border-color .2s, background .2s; }
+.media-drop:hover, .media-drop.dragover { border-color:#2563eb; background:#eff6ff; color:#1d4ed8; }
+.media-drop input[type=file] { display:none; }
+.media-drop-icon { font-size:2rem; margin-bottom:8px; }
+.media-drop-hint { font-size:.75rem; color:#94a3b8; margin-top:4px; }
+.media-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
+.media-item { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+.media-item img { width:100%; height:140px; object-fit:cover; display:block; background:#f8fafc; }
+.media-item-body { padding:10px 12px; }
+.media-item-name { font-size:.78rem; font-weight:700; color:#1e3a5f; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px; }
+.media-item-meta { font-size:.7rem; color:#94a3b8; margin-bottom:8px; }
+.media-url-bar { margin-bottom:6px; }
+.media-url-input { width:100%; padding:5px 8px; border:1px solid #e5e7eb; border-radius:6px; font-size:.72rem; font-family:monospace; color:#475569; background:#f8fafc; box-sizing:border-box; }
+.media-copy-btn { width:100%; padding:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:7px; font-size:.75rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.media-copy-btn:hover { background:#dbeafe; }
+.media-copy-btn.copied { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
+.usage-box { background:#0f172a; color:#e2e8f0; border-radius:10px; padding:12px 14px; font-size:.72rem; font-family:monospace; white-space:pre; line-height:1.7; overflow-x:auto; }
+.uk { color:#7dd3fc; }
+.uv { color:#86efac; }
+</style>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Media Library</h1>
+    <div class="muted">อัปโหลดรูปภาพสำหรับใช้ใน LINE Flex Message</div>
   </div>
 </div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;" class="mt-4">
+
+  {# ── Left: Upload + Grid ── #}
+  <div>
+    <div class="media-upload-card">
+      <h3>อัปโหลดรูปภาพ</h3>
+      <form method="post" action="/media" enctype="multipart/form-data" id="upload-form">
+        <div class="media-drop" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <input type="file" name="image" id="file-input" accept="image/*" onchange="handleFileSelect(this)">
+          <div class="media-drop-icon">🖼️</div>
+          <div>คลิกหรือลากไฟล์มาวางที่นี่</div>
+          <div class="media-drop-hint">รองรับ JPG, PNG, WEBP · สูงสุด 5 MB · ปรับขนาดอัตโนมัติ max 1024×1024</div>
+        </div>
+        <div id="file-preview" style="display:none;margin-top:12px;align-items:center;gap:12px;">
+          <img id="preview-img" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;flex-shrink:0;">
+          <div style="flex:1;min-width:0;">
+            <div id="preview-name" style="font-size:.83rem;font-weight:700;color:#1e3a5f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+            <div id="preview-size" style="font-size:.75rem;color:#94a3b8;margin-top:2px;"></div>
+          </div>
+          <button type="submit" style="padding:9px 22px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:0;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;flex-shrink:0;">
+            ⬆️ อัปโหลด
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="mt-4">
+      {% if media_files %}
+      <div style="font-size:.78rem;font-weight:700;color:#64748b;margin-bottom:12px;">
+        รูปภาพทั้งหมด ({{ media_files|length }} รายการ)
+      </div>
+      <div class="media-grid">
+        {% for m in media_files %}
+        <div class="media-item">
+          <a href="{{ m.public_url }}" target="_blank">
+            <img src="{{ m.public_url }}" alt="{{ m.original_name }}" loading="lazy"
+                 onerror="this.style.background='#f1f5f9'">
+          </a>
+          <div class="media-item-body">
+            <div class="media-item-name" title="{{ m.original_name }}">{{ m.original_name }}</div>
+            <div class="media-item-meta">
+              {% if m.width and m.height %}{{ m.width }}×{{ m.height }} px · {% endif %}{{ m.mime_type or 'image' }}
+            </div>
+            <div class="media-url-bar">
+              <input class="media-url-input" value="{{ m.public_url }}" readonly onclick="this.select()">
+            </div>
+            <button class="media-copy-btn" onclick="copyUrl(this, '{{ m.public_url }}')">
+              📋 คัดลอก URL
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card" style="text-align:center;padding:32px;color:#94a3b8;font-size:.88rem;">
+        ยังไม่มีรูปภาพ · อัปโหลดรูปแรกได้เลย
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Right: How to use ── #}
+  <div style="position:sticky;top:80px;">
+    <div class="media-upload-card">
+      <h3>วิธีนำ URL ไปใช้ใน Flex Message</h3>
+      <p style="font-size:.82rem;color:#64748b;line-height:1.65;margin:0 0 14px;">
+        กด <strong>📋 คัดลอก URL</strong> จากรูปที่ต้องการ แล้วนำไปวางใน JSON ของ Template
+      </p>
+
+      <div style="font-size:.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">รูปภายใน Bubble</div>
+      <div class="usage-box">{
+  <span class="uk">"type"</span>: <span class="uv">"image"</span>,
+  <span class="uk">"url"</span>: <span class="uv">"https://yourdomain/
+    static/uploads/abc.jpg"</span>,
+  <span class="uk">"size"</span>: <span class="uv">"full"</span>,
+  <span class="uk">"aspectRatio"</span>: <span class="uv">"20:13"</span>,
+  <span class="uk">"aspectMode"</span>: <span class="uv">"cover"</span>
+}</div>
+
+      <div style="font-size:.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px;">Hero Image (ส่วนบน Bubble)</div>
+      <div class="usage-box">{
+  <span class="uk">"hero"</span>: {
+    <span class="uk">"type"</span>: <span class="uv">"image"</span>,
+    <span class="uk">"url"</span>: <span class="uv">"https://yourdomain/
+      static/uploads/abc.jpg"</span>,
+    <span class="uk">"size"</span>: <span class="uv">"full"</span>
+  }
+}</div>
+
+      <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:.78rem;color:#92400e;line-height:1.6;">
+        ⚠️ URL ต้องเป็น <strong>HTTPS</strong> สาธารณะ<br>
+        LINE ดึงรูปจาก URL โดยตรง — ถ้าใช้ localhost รูปจะไม่แสดง
+      </div>
+
+      <div style="font-size:.75rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px;">ขนาดแนะนำสำหรับ LINE</div>
+      <table style="width:100%;font-size:.75rem;border-collapse:collapse;">
+        <thead><tr style="background:#f8fafc;">
+          <th style="padding:5px 8px;text-align:left;color:#64748b;font-weight:700;">ตำแหน่ง</th>
+          <th style="padding:5px 8px;text-align:left;color:#64748b;font-weight:700;">ขนาด</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:5px 8px;border-top:1px solid #f1f5f9;color:#374151;">Hero Image</td><td style="padding:5px 8px;border-top:1px solid #f1f5f9;font-family:monospace;color:#374151;">1024×576 px</td></tr>
+          <tr><td style="padding:5px 8px;border-top:1px solid #f1f5f9;color:#374151;">Icon / Logo</td><td style="padding:5px 8px;border-top:1px solid #f1f5f9;font-family:monospace;color:#374151;">48×48 px</td></tr>
+          <tr><td style="padding:5px 8px;border-top:1px solid #f1f5f9;color:#374151;">Thumbnail</td><td style="padding:5px 8px;border-top:1px solid #f1f5f9;font-family:monospace;color:#374151;">240×240 px</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function copyUrl(btn, url) {
+  navigator.clipboard.writeText(url).then(function() {
+    btn.textContent = '✓ คัดลอกแล้ว';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = '📋 คัดลอก URL';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function handleFileSelect(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var preview = document.getElementById('file-preview');
+  var img = document.getElementById('preview-img');
+  document.getElementById('preview-name').textContent = file.name;
+  document.getElementById('preview-size').textContent = (file.size/1024/1024).toFixed(2) + ' MB';
+  preview.style.display = 'flex';
+  var reader = new FileReader();
+  reader.onload = function(e) { img.src = e.target.result; };
+  reader.readAsDataURL(file);
+}
+
+var drop = document.getElementById('drop-zone');
+drop.addEventListener('dragover', function(e) { e.preventDefault(); drop.classList.add('dragover'); });
+drop.addEventListener('dragleave', function() { drop.classList.remove('dragover'); });
+drop.addEventListener('drop', function(e) {
+  e.preventDefault();
+  drop.classList.remove('dragover');
+  var file = e.dataTransfer.files[0];
+  if (!file) return;
+  var input = document.getElementById('file-input');
+  var dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  handleFileSelect(input);
+});
+</script>
 {% endblock %}

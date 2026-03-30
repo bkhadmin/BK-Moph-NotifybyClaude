@@ -1,20 +1,206 @@
 {% extends "base.html" %}
 {% block body %}
+<style>
+.conn-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:20px; }
+
+.conn-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:16px; overflow:hidden; }
+.conn-card-header { display:flex; align-items:center; gap:14px; padding:18px 20px; border-bottom:1.5px solid #f1f5f9; }
+.conn-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
+.conn-icon.db   { background:#eff6ff; }
+.conn-icon.api  { background:#f0fdf4; }
+.conn-icon.line { background:#fdf4ff; }
+.conn-title { font-size:.95rem; font-weight:800; color:#0f172a; }
+.conn-sub   { font-size:.75rem; color:#64748b; margin-top:2px; }
+
+.conn-status { margin-left:auto; display:flex; align-items:center; gap:6px; font-size:.8rem; font-weight:700; padding:4px 12px; border-radius:999px; white-space:nowrap; }
+.conn-status.ok         { background:#f0fdf4; color:#15803d; }
+.conn-status.failed     { background:#fef2f2; color:#991b1b; }
+.conn-status.incomplete { background:#fefce8; color:#92400e; }
+.conn-status.configured { background:#f0fdf4; color:#15803d; }
+.conn-status::before { content:''; width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.conn-status.ok::before         { background:#22c55e; }
+.conn-status.failed::before     { background:#ef4444; }
+.conn-status.incomplete::before { background:#eab308; }
+.conn-status.configured::before { background:#22c55e; }
+
+.conn-body { padding:16px 20px; }
+.conn-kv { display:flex; align-items:flex-start; gap:10px; padding:7px 0; border-bottom:1px solid #f8fafc; font-size:.82rem; }
+.conn-kv:last-child { border-bottom:none; padding-bottom:0; }
+.conn-k { color:#94a3b8; font-weight:600; min-width:120px; flex-shrink:0; }
+.conn-v { color:#1e3a5f; font-weight:700; word-break:break-all; flex:1; }
+.conn-v.ok   { color:#15803d; }
+.conn-v.bad  { color:#dc2626; }
+.conn-v.mono { font-family:monospace; font-size:.78rem; color:#475569; font-weight:400; }
+
+.conn-error { margin:12px 0 0; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:10px 14px; font-size:.8rem; color:#991b1b; word-break:break-all; }
+
+.check-item { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #f8fafc; font-size:.82rem; }
+.check-item:last-child { border-bottom:none; }
+.check-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.check-dot.ok  { background:#22c55e; }
+.check-dot.bad { background:#ef4444; }
+.check-label { flex:1; color:#1e3a5f; font-weight:600; }
+.check-val   { font-size:.75rem; font-weight:700; }
+.check-val.ok  { color:#15803d; }
+.check-val.bad { color:#dc2626; }
+</style>
+
 <div class="page-header">
-  <h1 class="page-title">System Connections</h1>
+  <div>
+    <h1 class="page-title">System Connections</h1>
+    <div class="muted">ตรวจสอบการเชื่อมต่อระบบภายนอก</div>
+  </div>
+  <div class="page-actions">
+    <a href="/system/connections" style="padding:9px 18px;border:1.5px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:.85rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+      🔄 เช็คใหม่
+    </a>
+  </div>
 </div>
-<div class="grid-3 mt-6">
-  <div class="card">
-    <h3>HOSxP Database</h3>
-    <pre>{{ hosxp_result }}</pre>
+
+<div class="conn-grid mt-4">
+
+  {# ── HOSxP Database ── #}
+  {% set r = hosxp_result %}
+  {% set st = r.get('status','failed') if r is mapping else 'failed' %}
+  <div class="conn-card">
+    <div class="conn-card-header">
+      <div class="conn-icon db">🗄️</div>
+      <div>
+        <div class="conn-title">HOSxP Database</div>
+        <div class="conn-sub">MySQL / MariaDB สำหรับดึงข้อมูลผู้ป่วย</div>
+      </div>
+      <div class="conn-status {{ st }}">{{ st | upper }}</div>
+    </div>
+    <div class="conn-body">
+      {% if st == 'ok' %}
+        <div class="conn-kv">
+          <span class="conn-k">การเชื่อมต่อ</span>
+          <span class="conn-v ok">✓ เชื่อมต่อสำเร็จ</span>
+        </div>
+        {% if r.get('result') %}
+        <div class="conn-kv">
+          <span class="conn-k">Test Query</span>
+          <span class="conn-v mono">SELECT 1 → {{ r.result }}</span>
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="conn-kv">
+          <span class="conn-k">สถานะ</span>
+          <span class="conn-v bad">✗ เชื่อมต่อไม่ได้</span>
+        </div>
+        {% if r.get('detail') %}
+        <div class="conn-error">{{ r.detail }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
   </div>
-  <div class="card">
-    <h3>Provider / Health ID Config</h3>
-    <pre>{{ provider_result }}</pre>
+
+  {# ── Provider / Health ID ── #}
+  {% set r = provider_result %}
+  {% set st = r.get('status','failed') if r is mapping else 'failed' %}
+  <div class="conn-card">
+    <div class="conn-card-header">
+      <div class="conn-icon api">🔐</div>
+      <div>
+        <div class="conn-title">Provider / Health ID</div>
+        <div class="conn-sub">SSO ผ่าน Health ID สำหรับ Login Provider</div>
+      </div>
+      <div class="conn-status {{ st }}">{{ st | upper }}</div>
+    </div>
+    <div class="conn-body">
+      {% if r is mapping and r.get('checks') %}
+        {% set checks = r.checks %}
+        {% set label_map = {
+          'provider_login_enabled':      'Provider Login เปิดใช้งาน',
+          'health_id_base_url':          'Health ID Base URL',
+          'health_id_client_id':         'Health ID Client ID',
+          'health_id_client_secret':     'Health ID Client Secret',
+          'health_id_redirect_uri':      'Redirect URI',
+          'provider_client_id':          'Provider Client ID',
+          'provider_secret_key':         'Provider Secret Key',
+          'provider_service_token_url':  'Provider Token URL',
+          'provider_profile_url':        'Provider Profile URL'
+        } %}
+        {% for k, v in checks.items() %}
+          {% if k != 'provider_token_by_modes' %}
+          <div class="check-item">
+            <div class="check-dot {% if v %}ok{% else %}bad{% endif %}"></div>
+            <span class="check-label">{{ label_map.get(k, k) }}</span>
+            <span class="check-val {% if v %}ok{% else %}bad{% endif %}">
+              {% if v is sameas true %}ตั้งค่าแล้ว
+              {% elif v is sameas false %}ยังไม่ได้ตั้งค่า
+              {% else %}{{ v }}
+              {% endif %}
+            </span>
+          </div>
+          {% endif %}
+        {% endfor %}
+        {% if checks.get('provider_token_by_modes') %}
+        <div class="conn-kv" style="margin-top:8px;">
+          <span class="conn-k">Token Modes</span>
+          <span class="conn-v mono">{{ checks.provider_token_by_modes }}</span>
+        </div>
+        {% endif %}
+      {% elif r.get('detail') %}
+        <div class="conn-kv">
+          <span class="conn-k">สถานะ</span>
+          <span class="conn-v bad">✗ ตรวจสอบไม่ได้</span>
+        </div>
+        <div class="conn-error">{{ r.detail }}</div>
+      {% endif %}
+    </div>
   </div>
-  <div class="card">
-    <h3>MOPH Notify Config</h3>
-    <pre>{{ notify_result }}</pre>
+
+  {# ── MOPH Notify ── #}
+  {% set r = notify_result %}
+  {% set st = r.get('status','failed') if r is mapping else 'failed' %}
+  <div class="conn-card">
+    <div class="conn-card-header">
+      <div class="conn-icon line">💬</div>
+      <div>
+        <div class="conn-title">MOPH Notify</div>
+        <div class="conn-sub">LINE Notify ผ่าน MOPH Gateway</div>
+      </div>
+      <div class="conn-status {{ st }}">{{ st | upper }}</div>
+    </div>
+    <div class="conn-body">
+      {% if r is mapping %}
+        {% if r.get('base_url') %}
+        <div class="conn-kv">
+          <span class="conn-k">Base URL</span>
+          <span class="conn-v mono">{{ r.base_url }}</span>
+        </div>
+        {% endif %}
+        {% if r.get('send_path') %}
+        <div class="conn-kv">
+          <span class="conn-k">Send Path</span>
+          <span class="conn-v mono">{{ r.send_path }}</span>
+        </div>
+        {% endif %}
+        <div class="conn-kv">
+          <span class="conn-k">Client Key</span>
+          <span class="conn-v {% if r.get('client_key') %}ok{% else %}bad{% endif %}">
+            {% if r.get('client_key') %}✓ ตั้งค่าแล้ว{% else %}✗ ยังไม่ได้ตั้งค่า{% endif %}
+          </span>
+        </div>
+        <div class="conn-kv">
+          <span class="conn-k">Secret Key</span>
+          <span class="conn-v {% if r.get('secret_key') %}ok{% else %}bad{% endif %}">
+            {% if r.get('secret_key') %}✓ ตั้งค่าแล้ว{% else %}✗ ยังไม่ได้ตั้งค่า{% endif %}
+          </span>
+        </div>
+        {% if r.get('room_name') %}
+        <div class="conn-kv">
+          <span class="conn-k">ห้อง LINE</span>
+          <span class="conn-v">{{ r.room_name }}</span>
+        </div>
+        {% endif %}
+        {% if r.get('detail') %}
+        <div class="conn-error">{{ r.detail }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
   </div>
+
 </div>
 {% endblock %}

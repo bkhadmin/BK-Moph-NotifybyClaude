@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% block body %}
+<style>
+.help-toc { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px; padding:20px 24px; margin-bottom:24px; }
+.help-toc h3 { font-size:.85rem; font-weight:800; color:#1e3a5f; margin:0 0 12px; }
+.help-toc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px 24px; }
+.help-toc a { font-size:.82rem; color:#2563eb; text-decoration:none; display:flex; align-items:center; gap:6px; padding:3px 0; }
+.help-toc a:hover { text-decoration:underline; }
+
+.help-section { background:#fff; border:1.5px solid #e5e7eb; border-radius:16px; padding:24px 28px; margin-bottom:20px; scroll-margin-top:80px; }
+.help-section-title { display:flex; align-items:center; gap:12px; margin:0 0 18px; padding-bottom:14px; border-bottom:1.5px solid #f1f5f9; }
+.help-section-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+.help-section h2 { font-size:1.05rem; font-weight:800; color:#0f172a; margin:0; }
+.help-section p { font-size:.88rem; color:#374151; line-height:1.7; margin:0 0 12px; }
+.help-section p:last-child { margin-bottom:0; }
+
+.help-step { display:flex; gap:14px; margin-bottom:14px; }
+.help-step-num { width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-size:.78rem; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.help-step-body { flex:1; font-size:.88rem; color:#374151; line-height:1.65; }
+.help-step-body strong { color:#0f172a; }
+
+.help-note { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 16px; font-size:.83rem; color:#1e40af; margin:12px 0; line-height:1.6; }
+.help-note.warn { background:#fefce8; border-color:#fde68a; color:#92400e; }
+.help-note.tip  { background:#f0fdf4; border-color:#bbf7d0; color:#15803d; }
+
+.help-table { width:100%; border-collapse:collapse; font-size:.83rem; margin:12px 0; }
+.help-table th { background:#f8fafc; color:#64748b; font-weight:700; padding:8px 12px; text-align:left; border-bottom:2px solid #e5e7eb; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
+.help-table td { padding:8px 12px; border-bottom:1px solid #f1f5f9; color:#374151; vertical-align:top; }
+.help-table tr:last-child td { border-bottom:none; }
+.help-table code { background:#f1f5f9; border-radius:4px; padding:1px 6px; font-size:.8rem; color:#0f172a; font-family:monospace; }
+
+.help-badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.72rem; font-weight:700; }
+.help-badge.green  { background:#f0fdf4; color:#15803d; }
+.help-badge.blue   { background:#eff6ff; color:#1d4ed8; }
+.help-badge.red    { background:#fef2f2; color:#991b1b; }
+.help-badge.yellow { background:#fefce8; color:#92400e; }
+</style>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">คู่มือการใช้งาน</h1>
+    <div class="muted">BK-Moph Notify — ระบบแจ้งเตือนผลวิกฤตผ่าน LINE</div>
+  </div>
+  <div class="page-actions">
+    <button onclick="window.print()" style="padding:9px 18px;border:1.5px solid #64748b;border-radius:10px;background:#fff;color:#374151;font-size:.85rem;font-weight:700;cursor:pointer;">
+      🖨️ พิมพ์คู่มือ
+    </button>
+  </div>
+</div>
+
+{# ── สารบัญ ── #}
+<div class="help-toc mt-4">
+  <h3>📋 สารบัญ</h3>
+  <div class="help-toc-grid">
+    <a href="#overview">1. ภาพรวมระบบ</a>
+    <a href="#login">2. การเข้าสู่ระบบ</a>
+    <a href="#dashboard">3. Dashboard</a>
+    <a href="#alert-cases">4. Alert Cases — ติดตามเคส</a>
+    <a href="#manual-claim">5. Manual Claim</a>
+    <a href="#notify-test">6. ทดสอบส่งข้อความ</a>
+    <a href="#alert-type-configs">7. Alert Type Configs</a>
+    <a href="#claim-notify">8. Claim Notify Settings</a>
+    <a href="#notify-rooms">9. Notify Rooms</a>
+    <a href="#schedules">10. Schedules</a>
+    <a href="#scheduler-monitor">11. Scheduler Monitor</a>
+    <a href="#queries">12. Approved Queries</a>
+    <a href="#templates">13. Templates</a>
+    <a href="#media">14. Media Library</a>
+    <a href="#users">15. จัดการ Users</a>
+    <a href="#profiles">16. Provider Profiles</a>
+    <a href="#logs">17. Logs</a>
+    <a href="#connections">18. System Connections</a>
+  </div>
+</div>
+
+{# 1 ── ภาพรวม ── #}
+<div class="help-section" id="overview">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#eff6ff;">🔔</div>
+    <h2>1. ภาพรวมระบบ</h2>
+  </div>
+  <p>
+    <strong>BK-Moph Notify</strong> คือระบบแจ้งเตือนผลวิกฤต (Critical Alert) สำหรับโรงพยาบาล โดยดึงข้อมูลจากฐานข้อมูล HOSxP แล้วส่งข้อความแจ้งเตือนผ่าน <strong>LINE</strong> ไปยังกลุ่มเจ้าหน้าที่ที่เกี่ยวข้อง เช่น ผลแล็บวิกฤต (Lab Critical) หรือยาวิกฤต (Drug Critical)
+  </p>
+  <p>เจ้าหน้าที่รับทราบข้อมูลแล้วสามารถ <strong>กดรับเคส (Claim)</strong> ผ่านปุ่มในข้อความ LINE ได้โดยตรง และระบบจะบันทึกว่าใครรับเคสนั้นไป</p>
+  <table class="help-table">
+    <thead><tr><th>ส่วนประกอบ</th><th>หน้าที่</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Scheduler</strong></td><td>รันงานตามเวลาที่กำหนด เช่น ทุก 5 นาที เพื่อ query ข้อมูลใหม่จาก HOSxP</td></tr>
+      <tr><td><strong>Worker</strong></td><td>ส่งข้อความ LINE ในเบื้องหลัง (async queue)</td></tr>
+      <tr><td><strong>Web App</strong></td><td>หน้าจัดการระบบ ดูสถิติ ตั้งค่า</td></tr>
+      <tr><td><strong>MOPH Notify</strong></td><td>Gateway ส่ง LINE Flex Message ผ่าน MOPH API</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{# 2 ── Login ── #}
+<div class="help-section" id="login">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fdf4ff;">🔑</div>
+    <h2>2. การเข้าสู่ระบบ</h2>
+  </div>
+  <p>รองรับการเข้าสู่ระบบ 2 แบบ</p>
+
+  <p><strong>แบบ A — Username / Password (Admin)</strong></p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">เปิด URL ของระบบ → หน้า Login จะปรากฏขึ้น</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">กรอก <strong>Username</strong> และ <strong>Password</strong></div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กรอก <strong>รหัส 2FA</strong> จาก Google Authenticator (ถ้าเปิดใช้งาน)</div></div>
+
+  <p style="margin-top:14px;"><strong>แบบ B — Provider Login (SSO)</strong></p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กดปุ่ม <strong>"เข้าสู่ระบบด้วย Health ID"</strong></div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">ระบบจะ redirect ไปยังหน้า Health ID Portal ให้ยืนยันตัวตน</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">หลังยืนยันสำเร็จ ระบบดึงข้อมูล Profile มาสร้าง/อัปเดต Provider Profile อัตโนมัติ</div></div>
+</div>
+
+{# 3 ── Dashboard ── #}
+<div class="help-section" id="dashboard">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#f0fdf4;">⊞</div>
+    <h2>3. Dashboard</h2>
+  </div>
+  <p>หน้าแรกหลังเข้าสู่ระบบ แสดงภาพรวมทั้งหมดของระบบ ณ ปัจจุบัน</p>
+  <table class="help-table">
+    <thead><tr><th>ส่วน</th><th>แสดงข้อมูล</th></tr></thead>
+    <tbody>
+      <tr><td>Stat Cards</td><td>จำนวน Users, Access Logs, Send Logs, Schedules, Media Files, Provider Profiles</td></tr>
+      <tr><td>Delivery Status</td><td>สถานะการส่ง LINE ล่าสุด (Success / Failed)</td></tr>
+      <tr><td>Quick Actions</td><td>ปุ่มลัดไปหน้า Notify Test, Queries, Templates, Scheduler</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{# 4 ── Alert Cases ── #}
+<div class="help-section" id="alert-cases">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fef2f2;">🚨</div>
+    <h2>4. Alert Cases — ติดตามเคส</h2>
+  </div>
+  <p>หน้านี้แสดงรายการ Alert ทั้งหมดที่ระบบสร้างขึ้น พร้อมสถิติการรับเคส</p>
+
+  <p><strong>สถิติด้านบน (Dashboard Stats)</strong></p>
+  <table class="help-table">
+    <thead><tr><th>Stat</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>Total Cases</td><td>จำนวนเคสทั้งหมดในช่วงเวลาที่กรอง</td></tr>
+      <tr><td>รับแล้ว</td><td>เคสที่มีผู้กด Claim แล้ว</td></tr>
+      <tr><td>รอรับเคส</td><td>เคสที่ยังไม่มีผู้รับ</td></tr>
+      <tr><td>Avg Claim Time</td><td>เวลาเฉลี่ยตั้งแต่สร้างเคสถึงรับเคส (นาที)</td></tr>
+      <tr><td>รับวันนี้</td><td>จำนวนเคสที่รับแล้วในวันปัจจุบัน</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>ตัวกรอง</strong></p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">เลือก <strong>วันที่</strong> (date_from / date_to) — default คือวันปัจจุบัน</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">กรอง <strong>ประเภท Alert</strong> (เช่น lab_critical, drug_critical)</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กรอง <strong>สถานะ</strong> (OPEN / CLAIMED)</div></div>
+  <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">กดปุ่ม <strong>Export CSV / XLSX</strong> เพื่อดาวน์โหลดข้อมูล</div></div>
+
+  <div class="help-note tip">สถิติ Dashboard ด้านบนจะนับตามเงื่อนไขที่กรองอยู่เสมอ ไม่ใช่ข้อมูลทั้งหมด</div>
+</div>
+
+{# 5 ── Manual Claim ── #}
+<div class="help-section" id="manual-claim">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fefce8;">🖐️</div>
+    <h2>5. Manual Claim</h2>
+  </div>
+  <p>กรณีที่ปุ่มรับเคสใน LINE ไม่ทำงาน หรือลิงก์หมดอายุ เจ้าหน้าที่สามารถเข้ามารับเคสจากหน้านี้โดยตรง</p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">เลือกช่วง <strong>วันที่</strong> ที่ต้องการ (default = วันปัจจุบัน)</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">ดูรายการเคสในตาราง — สถานะ <span class="help-badge red">OPEN</span> คือยังไม่มีผู้รับ</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กดปุ่ม <strong>"รับเคส"</strong> ในแถวที่ต้องการ → ระบบจะพาไปหน้ายืนยัน</div></div>
+  <div class="help-note warn">หน้านี้ต้องเข้าสู่ระบบก่อน ต่างจากลิงก์ใน LINE ที่ไม่ต้อง login</div>
+</div>
+
+{# 6 ── Notify Test ── #}
+<div class="help-section" id="notify-test">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#f0fdf4;">📤</div>
+    <h2>6. ทดสอบส่งข้อความ (Notify Test)</h2>
+  </div>
+  <p>หน้าสำหรับทดสอบส่ง LINE Message โดยไม่ต้องรอ Scheduler ทำงาน</p>
+
+  <p><strong>Flex JSON Editor</strong> — พร้อม Preview แบบ Real-time</p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">วาง <strong>Flex Message JSON</strong> ในช่องด้านซ้าย</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">ด้านขวาจะแสดง <strong>Preview</strong> ทันทีว่า Bubble จะหน้าตาอย่างไร</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">เลือก <strong>Notify Room</strong> (กลุ่ม LINE ที่จะส่ง)</div></div>
+  <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">กดปุ่ม <strong>"ส่ง Flex"</strong></div></div>
+
+  <p style="margin-top:14px;"><strong>ส่งข้อความด่วน (Text)</strong></p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กรอกข้อความในช่อง "ข้อความ"</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">เลือก Room → กดส่ง</div></div>
+
+  <p style="margin-top:14px;"><strong>Auto Flex (จาก Query + Template)</strong></p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">เลือก <strong>Alert Type</strong> ที่ต้องการทดสอบ</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">เลือก <strong>Template</strong> และ <strong>Query</strong> ที่ผูกกับ Alert Type นั้น</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กด <strong>"ส่ง Auto Flex"</strong> ระบบจะรัน query จริงแล้วส่ง</div></div>
+</div>
+
+{# 7 ── Alert Type Configs ── #}
+<div class="help-section" id="alert-type-configs">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#eff6ff;">⚙️</div>
+    <h2>7. Alert Type Configs</h2>
+  </div>
+  <p>กำหนดประเภทการแจ้งเตือนต่างๆ เช่น <code>lab_critical</code>, <code>drug_critical</code> แต่ละประเภทมีการตั้งค่าเป็นของตัวเอง</p>
+  <table class="help-table">
+    <thead><tr><th>Field</th><th>ความหมาย</th><th>ตัวอย่าง</th></tr></thead>
+    <tbody>
+      <tr><td>Type Code</td><td>รหัสอ้างอิงในระบบ</td><td><code>lab_critical</code></td></tr>
+      <tr><td>Display Name</td><td>ชื่อที่แสดงในหน้าจอ</td><td>ผลแล็บวิกฤต</td></tr>
+      <tr><td>Bubble Title</td><td>ชื่อหัว Bubble LINE รองรับ <code>{field}</code></td><td><code>🔴 {lab_items_name}</code></td></tr>
+      <tr><td>Bubble Color</td><td>สีหัว Bubble (HEX)</td><td><code>#DC2626</code></td></tr>
+      <tr><td>Required Fields</td><td>ชื่อ field ที่ต้องมีในข้อมูล (JSON array)</td><td><code>["hn","lab_items_name"]</code></td></tr>
+      <tr><td>Key Fields</td><td>Field ที่ใช้ dedup ไม่ส่งซ้ำ (JSON array)</td><td><code>["hn","lab_order_number"]</code></td></tr>
+    </tbody>
+  </table>
+  <div class="help-note">หาก <strong>Bubble Title</strong> ใส่ <code>{field}</code> เช่น <code>{lab_items_name}</code> ระบบจะดึงค่าจากข้อมูลแถวนั้นมาแสดงแทนให้อัตโนมัติ</div>
+</div>
+
+{# 8 ── Claim Notify ── #}
+<div class="help-section" id="claim-notify">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fdf4ff;">📣</div>
+    <h2>8. Claim Notify Settings</h2>
+  </div>
+  <p>ตั้งค่าข้อความที่จะส่งกลับไปยัง LINE <strong>หลังจากมีผู้รับเคสแล้ว</strong></p>
+  <table class="help-table">
+    <thead><tr><th>Field</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>Display Lines</td><td>รายการแถวข้อมูลใน Bubble (JSON array) เช่น <code>[{"text": "{lab_items_name} = {lab_order_result}"}]</code></td></tr>
+      <tr><td>Claim Notify Template</td><td>Template Flex JSON ที่ใช้ส่งกลับ LINE เมื่อรับเคสแล้ว</td></tr>
+    </tbody>
+  </table>
+  <p>ด้านขวาของหน้ามีตัวอย่าง Preview ว่าข้อความที่ส่งกลับจะหน้าตาเป็นอย่างไร</p>
+  <div class="help-note tip">กดปุ่ม <strong>"ดูตัวอย่าง"</strong> เพื่อ preview ข้อความจาก Display Lines ได้ก่อนบันทึก</div>
+</div>
+
+{# 9 ── Notify Rooms ── #}
+<div class="help-section" id="notify-rooms">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#f0fdf4;">💬</div>
+    <h2>9. Notify Rooms</h2>
+  </div>
+  <p>จัดการ <strong>ห้อง LINE</strong> ที่ใช้รับข้อความแจ้งเตือน แต่ละห้องมี Client Key / Secret Key เป็นของตัวเอง (Multi-tenant)</p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กดปุ่ม <strong>"เพิ่มห้องใหม่"</strong></div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">กรอก <strong>ชื่อห้อง</strong>, <strong>Room Code</strong>, <strong>Client Key</strong>, <strong>Secret Key</strong> จาก MOPH Notify Portal</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">เปิด/ปิด <strong>สถานะ</strong> ของห้อง (Active / Inactive)</div></div>
+  <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">กด <strong>"บันทึก"</strong></div></div>
+  <div class="help-note">ห้องที่ตั้งค่าไว้จะปรากฏใน dropdown เมื่อทดสอบส่งข้อความในหน้า Notify Test</div>
+</div>
+
+{# 10 ── Schedules ── #}
+<div class="help-section" id="schedules">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fefce8;">⏱️</div>
+    <h2>10. Schedules</h2>
+  </div>
+  <p>จัดการงานที่รันอัตโนมัติตามเวลาที่กำหนด เช่น ดึงข้อมูลแล็บจาก HOSxP ทุก 5 นาที</p>
+  <table class="help-table">
+    <thead><tr><th>Field</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>Job Name</td><td>ชื่อของงาน</td></tr>
+      <tr><td>Alert Type</td><td>ประเภทแจ้งเตือนที่งานนี้รับผิดชอบ</td></tr>
+      <tr><td>Query</td><td>SQL Query ที่ใช้ดึงข้อมูล</td></tr>
+      <tr><td>Template</td><td>Flex Template ที่ใช้ส่ง LINE</td></tr>
+      <tr><td>Notify Room</td><td>ห้อง LINE ที่ส่งข้อมูลไป</td></tr>
+      <tr><td>Cron Expression</td><td>เวลาที่รัน เช่น <code>*/5 * * * *</code> = ทุก 5 นาที</td></tr>
+      <tr><td>Active</td><td>เปิด/ปิดงานนี้</td></tr>
+    </tbody>
+  </table>
+  <div class="help-note"><strong>Cron Expression</strong> ตัวอย่าง: <code>*/5 * * * *</code> ทุก 5 นาที | <code>0 8 * * *</code> ทุกวัน 8:00 น. | <code>0 */2 * * *</code> ทุก 2 ชั่วโมง</div>
+</div>
+
+{# 11 ── Scheduler Monitor ── #}
+<div class="help-section" id="scheduler-monitor">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#f0fdf4;">📡</div>
+    <h2>11. Scheduler Monitor</h2>
+  </div>
+  <p>หน้ามอนิเตอร์ดูสถานะของ Scheduler แบบ Real-time โดยไม่ต้องเข้า server</p>
+  <table class="help-table">
+    <thead><tr><th>ส่วน</th><th>ข้อมูลที่แสดง</th></tr></thead>
+    <tbody>
+      <tr><td>Stats Bar</td><td>จำนวน Jobs ทั้งหมด / Active / Inactive / Total Runs</td></tr>
+      <tr><td>Job Cards</td><td>แต่ละ job แสดง Cron Expression, Next Run, Last Run, สถานะ Success/Failed</td></tr>
+      <tr><td>Log Table</td><td>ประวัติการรัน พร้อมสถานะและ error message (ถ้ามี)</td></tr>
+      <tr><td>ปุ่ม Run Now</td><td>รัน Job ทันทีโดยไม่ต้องรอเวลา</td></tr>
+    </tbody>
+  </table>
+  <div class="help-note warn">หาก Job แสดงสถานะ <span class="help-badge red">Failed</span> ให้กดดู error detail ใน Log Table เพื่อวิเคราะห์สาเหตุ</div>
+</div>
+
+{# 12 ── Queries ── #}
+<div class="help-section" id="queries">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#eff6ff;">🔍</div>
+    <h2>12. Approved Queries</h2>
+  </div>
+  <p>จัดการ SQL Query ที่ได้รับอนุมัติให้ใช้ในระบบ เพื่อดึงข้อมูลจาก HOSxP</p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กดปุ่ม <strong>"เพิ่ม Query ใหม่"</strong></div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">กรอก <strong>ชื่อ Query</strong> และ <strong>SQL Statement</strong> (รองรับเฉพาะ SELECT)</div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">กด <strong>"Preview"</strong> เพื่อทดสอบ Query กับ HOSxP จริง ดูตัวอย่างผลลัพธ์</div></div>
+  <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">กด <strong>"บันทึก"</strong> เพื่อเพิ่มเข้า Approved List</div></div>
+  <div class="help-note warn">ระบบอนุญาตเฉพาะ <strong>SELECT</strong> เท่านั้น ไม่อนุญาต INSERT / UPDATE / DELETE / DROP</div>
+</div>
+
+{# 13 ── Templates ── #}
+<div class="help-section" id="templates">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fdf4ff;">🎨</div>
+    <h2>13. Templates</h2>
+  </div>
+  <p>จัดการ Flex Message Template สำหรับส่ง LINE แต่ละ Template เป็น JSON ที่ออกแบบรูปแบบข้อความไว้</p>
+  <p>รองรับ <strong>variable substitution</strong> โดยใช้ <code>{field_name}</code> ในข้อความ เช่น <code>{patient_name}</code>, <code>{hn}</code> ระบบจะแทนค่าจากข้อมูลแถวที่ส่งมาโดยอัตโนมัติ</p>
+  <div class="help-note tip">กดปุ่ม <strong>"Dynamic Flex Builder"</strong> เพื่อสร้าง Template แบบ visual โดยไม่ต้องเขียน JSON เอง</div>
+</div>
+
+{# 14 ── Media ── #}
+<div class="help-section" id="media">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#f0fdf4;">🖼️</div>
+    <h2>14. Media Library</h2>
+  </div>
+  <p>อัปโหลดและจัดการไฟล์รูปภาพ หรือ media ที่ใช้ใน Flex Message LINE เช่น โลโก้โรงพยาบาล, รูป banner</p>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">กดปุ่ม <strong>"อัปโหลดไฟล์"</strong> และเลือกไฟล์จากเครื่อง</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">หลังอัปโหลด ระบบจะให้ <strong>URL</strong> ที่นำไปใส่ใน Template JSON ได้เลย</div></div>
+</div>
+
+{# 15 ── Users ── #}
+<div class="help-section" id="users">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#eff6ff;">👤</div>
+    <h2>15. จัดการ Users</h2>
+  </div>
+  <p>จัดการบัญชีผู้ใช้งานระบบ (Admin Panel)</p>
+  <table class="help-table">
+    <thead><tr><th>ฟังก์ชัน</th><th>รายละเอียด</th></tr></thead>
+    <tbody>
+      <tr><td>เพิ่ม User</td><td>กรอก username, password, กำหนด Role</td></tr>
+      <tr><td>แก้ไข Role</td><td>กำหนดสิทธิ์การเข้าถึงเมนูต่างๆ ผ่าน RBAC</td></tr>
+      <tr><td>Reset Password</td><td>เปลี่ยนรหัสผ่านให้ผู้ใช้</td></tr>
+      <tr><td>ลบ User</td><td>ลบบัญชีผู้ใช้ออกจากระบบ</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{# 16 ── Profiles ── #}
+<div class="help-section" id="profiles">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#f0fdf4;">🪪</div>
+    <h2>16. Provider Profiles</h2>
+  </div>
+  <p>ข้อมูลโปรไฟล์ของผู้ใช้ที่ login ผ่าน Health ID (Provider Login) ระบบดึงข้อมูลมาจาก Provider API อัตโนมัติ</p>
+  <table class="help-table">
+    <thead><tr><th>ฟังก์ชัน</th><th>รายละเอียด</th></tr></thead>
+    <tbody>
+      <tr><td>ดูรายละเอียด</td><td>กดชื่อเพื่อดู Profile เต็ม รวมถึง Raw JSON จาก Provider</td></tr>
+      <tr><td>แก้ไขข้อมูล</td><td>แก้ไข ชื่อ ตำแหน่ง หน่วยงาน เบอร์โทร อีเมล</td></tr>
+      <tr><td>Sync จาก Provider JSON</td><td>ดึงข้อมูลจาก Raw JSON ที่ได้จาก Provider มาเติมทุก field ใหม่</td></tr>
+      <tr><td>ประวัติการเปลี่ยนแปลง</td><td>ดูว่า field ไหนถูกแก้ไขเมื่อใด โดยใคร</td></tr>
+      <tr><td>Export</td><td>ส่งออกรายการ Profiles เป็น CSV / XLSX</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{# 17 ── Logs ── #}
+<div class="help-section" id="logs">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#fefce8;">📋</div>
+    <h2>17. Logs</h2>
+  </div>
+  <p>ดูประวัติการทำงานของระบบ แบ่งเป็น 3 แท็บ</p>
+  <table class="help-table">
+    <thead><tr><th>แท็บ</th><th>บันทึกอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><span class="help-badge blue">Access Logs</span></td><td>การ Login / Logout, การเข้าถึงหน้าต่างๆ, IP Address</td></tr>
+      <tr><td><span class="help-badge yellow">Send Logs</span></td><td>ประวัติการส่ง LINE ทุกครั้ง สถานะ Success/Failed, Retry Count</td></tr>
+      <tr><td><span class="help-badge green">Delivery</span></td><td>สถานะ Delivery ที่ได้รับกลับจาก MOPH Notify Gateway</td></tr>
+    </tbody>
+  </table>
+  <p>มีตัวกรองวันที่, ค้นหาคำ, กรองสถานะ, กรอง Action และปุ่ม Export ทุกแท็บ</p>
+</div>
+
+{# 18 ── Connections ── #}
+<div class="help-section" id="connections">
+  <div class="help-section-title">
+    <div class="help-section-icon" style="background:#eff6ff;">🔌</div>
+    <h2>18. System Connections</h2>
+  </div>
+  <p>ตรวจสอบสถานะการเชื่อมต่อระบบภายนอกทั้งหมด โดยไม่ต้องเข้า server</p>
+  <table class="help-table">
+    <thead><tr><th>การเชื่อมต่อ</th><th>ตรวจสอบ</th><th>สถานะ</th></tr></thead>
+    <tbody>
+      <tr><td>HOSxP Database</td><td>ping MySQL / MariaDB ด้วย SELECT 1</td><td><span class="help-badge green">OK</span> / <span class="help-badge red">FAILED</span></td></tr>
+      <tr><td>Provider / Health ID</td><td>ตรวจว่า config ครบหรือไม่ (URL, Client ID, Secret)</td><td><span class="help-badge green">OK</span> / <span class="help-badge yellow">INCOMPLETE</span></td></tr>
+      <tr><td>MOPH Notify</td><td>ตรวจว่า Client Key / Secret Key ถูกตั้งค่าแล้วหรือไม่</td><td><span class="help-badge green">CONFIGURED</span> / <span class="help-badge red">FAILED</span></td></tr>
+    </tbody>
+  </table>
+  <div class="help-note tip">กดปุ่ม <strong>"🔄 เช็คใหม่"</strong> เพื่อทดสอบการเชื่อมต่อใหม่ทุกครั้ง</div>
+</div>
+
+<div style="text-align:center;padding:28px 0 8px;color:#94a3b8;font-size:.8rem;">
+  BK-Moph Notify — คู่มือการใช้งาน · อัปเดตล่าสุด {{ "now" | thaidt if false else "" }} 2568
+</div>
+
+{% endblock %}
