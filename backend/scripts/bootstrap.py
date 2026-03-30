@@ -65,6 +65,18 @@ def ensure_schema():
             conn.execute(text("ALTER TABLE alert_type_configs ADD COLUMN claim_notify_template TEXT NULL"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE access_logs ADD COLUMN created_at DATETIME NULL"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE send_logs ADD COLUMN created_at DATETIME NULL"))
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE provider_profile_histories ADD COLUMN created_at DATETIME NULL"))
+        except Exception:
+            pass
 
 def seed():
     Base.metadata.create_all(bind=engine)

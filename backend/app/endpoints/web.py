@@ -125,7 +125,7 @@ from app.db.session import get_db
 from app.repositories.users import get_by_username, get_by_id, get_all as get_users, upsert_provider_user, update_role, create_local_user, update_user, delete_user
 from app.repositories.roles import get_by_code, get_all as get_roles
 from app.repositories.permissions import get_all as get_permissions
-from app.repositories.access_logs import write_log, get_all as get_access_logs
+from app.repositories.access_logs import write_log, get_all as get_access_logs, get_filtered as get_access_logs_filtered
 from app.repositories.ip_bans import get_by_ip, touch_fail, clear_fail
 from app.repositories.role_permissions import set_role_permissions, get_permission_codes_for_role
 from app.repositories.approved_queries import get_all as get_queries, create_item as create_query, get_by_id as get_query_by_id, update_item as update_query, delete_item as delete_query
@@ -184,6 +184,14 @@ from app.services.timezone_utils import format_thai_datetime, format_thai_date, 
 templates.env.filters['thaidt'] = format_thai_datetime
 templates.env.filters['thaidate'] = format_thai_date
 templates.env.filters['thaidatestr'] = thai_date_str
+
+def _from_json_safe(value):
+    import json
+    try:
+        return json.loads(value) if isinstance(value, str) else value
+    except Exception:
+        return value
+templates.env.filters['from_json_safe'] = _from_json_safe
 
 
 
@@ -530,6 +538,22 @@ def profile_update_page(profile_id:int, request:Request, name_th:str=Form(''), p
     write_log(db, session.get('username'), client_ip(request), 'profile.update', 'success', f'profile_id={profile_id}')
     return RedirectResponse(f'/profiles/{profile_id}', status_code=302)
 
+@router.post('/profiles/{profile_id}/sync-from-raw')
+def profile_sync_from_raw(profile_id:int, request:Request, db:Session=Depends(get_db)):
+    import json as _json
+    session=require_session(request)
+    row = get_provider_profile_by_id(db, profile_id)
+    if not row or not row.raw_json:
+        raise HTTPException(status_code=404, detail='profile or raw_json not found')
+    try:
+        raw = _json.loads(row.raw_json)
+    except Exception:
+        raise HTTPException(status_code=400, detail='raw_json parse error')
+    from app.repositories.provider_profiles import upsert_profile
+    upsert_profile(db, row.user_id, raw, changed_by=session.get('username'))
+    write_log(db, session.get('username'), client_ip(request), 'profile.sync_raw', 'success', f'profile_id={profile_id}')
+    return RedirectResponse(f'/profiles/{profile_id}?synced=1', status_code=302)
+
 @router.get('/profiles/export')
 def profiles_export(request:Request, q:str='', format:str='csv', db:Session=Depends(get_db)):
     session=require_session(request)
@@ -546,32 +570,70 @@ def profiles_export(request:Request, q:str='', format:str='csv', db:Session=Depe
     return Response(content=data, media_type='text/csv; charset=utf-8', headers={'Content-Disposition': 'attachment; filename=provider_profiles.csv'})
 
 @router.get('/logs/access')
-def access_logs_page(request:Request, q:str='', page:int=1, per_page:int=20, db:Session=Depends(get_db)):
+def access_logs_page(request:Request, q:str='', status_filter:str='', action_filter:str='', date_from:str='', date_to:str='', tab:str='access', page:int=1, per_page:int=50, db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'logs')
+    today = bangkok_now_naive().strftime('%Y-%m-%d')
+    if not date_from and not date_to:
+        date_from = today
+        date_to = today
     access_rows = [{
-        "username": getattr(x, "username", None) or getattr(x, "actor", None) or "-",
+        "username": getattr(x, "actor", None) or "-",
         "ip_address": getattr(x, "ip_address", None) or "-",
         "action": getattr(x, "action", None) or "-",
         "status": getattr(x, "status", None) or "-",
         "detail": getattr(x, "detail", None) or "-",
-    } for x in get_access_logs(db)]
+        "created_at": getattr(x, "created_at", None),
+    } for x in get_access_logs_filtered(db, date_from, date_to)]
     send_rows = [{
         "id": getattr(x, "id", None),
-        "username": getattr(x, "actor", None) or getattr(x, "username", None) or "-",
+        "username": getattr(x, "actor", None) or "-",
         "channel": getattr(x, "channel", None) or "-",
         "status": getattr(x, "status", None) or "-",
         "retry_count": getattr(x, "retry_count", None) or 0,
         "detail": getattr(x, "detail", None) or "-",
+        "created_at": getattr(x, "created_at", None),
     } for x in get_send_logs(db)]
+    # filter send_rows by date too
+    if date_from:
+        send_rows = [r for r in send_rows if r.get("created_at") and str(r["created_at"])[:10] >= date_from]
+    if date_to:
+        send_rows = [r for r in send_rows if r.get("created_at") and str(r["created_at"])[:10] <= date_to]
     delivery_rows = [{"send_log_id": x.send_log_id, "external_message_id": x.external_message_id, "status": x.status, "provider_status": x.provider_status, "detail": x.detail} for x in get_delivery_statuses(db)]
-    access_rows = _filter_rows(access_rows, q)
-    send_rows = _filter_rows(send_rows, q)
-    delivery_rows = _filter_rows(delivery_rows, q)
+    # Summary stats (before filter)
+    access_stats = {
+        "total": len(access_rows),
+        "success": len([r for r in access_rows if (r.get("status") or "").lower() in ("success","ok")]),
+        "fail": len([r for r in access_rows if (r.get("status") or "").lower() in ("fail","error","failed","blocked")]),
+        "actions": sorted({r.get("action","") for r in access_rows if r.get("action") and r.get("action") != "-"}),
+        "statuses": sorted({r.get("status","") for r in access_rows if r.get("status") and r.get("status") != "-"}),
+    }
+    send_stats = {
+        "total": len(send_rows),
+        "success": len([r for r in send_rows if (r.get("status") or "").lower() in ("success","sent","ok")]),
+        "fail": len([r for r in send_rows if (r.get("status") or "").lower() in ("fail","error","failed")]),
+    }
+    # Apply filters
+    if q:
+        access_rows = _filter_rows(access_rows, q)
+        send_rows = _filter_rows(send_rows, q)
+        delivery_rows = _filter_rows(delivery_rows, q)
+    if status_filter:
+        access_rows = [r for r in access_rows if r.get("status","") == status_filter]
+        send_rows = [r for r in send_rows if r.get("status","") == status_filter]
+    if action_filter:
+        access_rows = [r for r in access_rows if r.get("action","") == action_filter]
     access_pager = paginate(access_rows, page=page, per_page=per_page)
     send_pager = paginate(send_rows, page=page, per_page=per_page)
     delivery_pager = paginate(delivery_rows, page=page, per_page=per_page)
-    return templates.TemplateResponse('admin/access_logs.html', ctx(request, db, session, logs=access_pager["items"], send_logs=send_pager["items"], delivery_statuses=delivery_pager["items"], keyword=q, pager=access_pager))
+    return templates.TemplateResponse('admin/access_logs.html', ctx(request, db, session,
+        logs=access_pager["items"], send_logs=send_pager["items"],
+        delivery_statuses=delivery_pager["items"],
+        keyword=q, status_filter=status_filter, action_filter=action_filter,
+        date_from=date_from, date_to=date_to, today=today,
+        tab=tab, pager=access_pager, send_pager=send_pager,
+        access_stats=access_stats, send_stats=send_stats,
+    ))
 
 @router.get('/logs/export/{kind}')
 def logs_export(kind:str, request:Request, q:str='', format:str='csv', db:Session=Depends(get_db)):
@@ -1762,20 +1824,22 @@ def logout(request:Request, db:Session=Depends(get_db)):
 
 
 @router.get('/alerts/manual-claim')
-def manual_claim_page(request:Request, db:Session=Depends(get_db)):
+def manual_claim_page(request:Request, db:Session=Depends(get_db),
+                      date_from:str=None, date_to:str=None):
     session = require_session(request)
     require_menu(db, session, 'notify')
+    from app.services.timezone_utils import today_bangkok_str
+    today = today_bangkok_str()
+    if not date_from: date_from = today
+    if not date_to:   date_to   = today
     try:
         from app.repositories.alert_cases import get_all as _get_all_cases
-        from app.services.timezone_utils import today_bangkok_str
-        today = today_bangkok_str()
         all_cases = _get_all_cases(db)
-        cases = [c for c in all_cases if c.created_at and str(c.created_at)[:10] == today]
-        if not cases:
-            cases = all_cases[:20]
+        cases = [c for c in all_cases
+                 if c.created_at and date_from <= str(c.created_at)[:10] <= date_to]
     except Exception:
         cases = []
     return templates.TemplateResponse(
         'admin/manual_claim.html',
-        ctx(request, db, session, alert_cases=cases)
+        ctx(request, db, session, alert_cases=cases, date_from=date_from, date_to=date_to)
     )

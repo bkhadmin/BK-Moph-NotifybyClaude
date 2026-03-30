@@ -1,6 +1,7 @@
-from sqlalchemy import String, Text
+from sqlalchemy import String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
+from app.services.timezone_write import bangkok_now_naive
 
 class ProviderProfileHistory(Base):
     __tablename__='provider_profile_histories'
@@ -11,3 +12,4 @@ class ProviderProfileHistory(Base):
     before_json:Mapped[str|None]=mapped_column(Text, nullable=True)
     after_json:Mapped[str|None]=mapped_column(Text, nullable=True)
     diff_json:Mapped[str|None]=mapped_column(Text, nullable=True)
+    created_at:Mapped[object]=mapped_column(DateTime, nullable=True, default=bangkok_now_naive)

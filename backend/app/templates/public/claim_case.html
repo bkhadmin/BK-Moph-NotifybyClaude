@@ -36,6 +36,7 @@
     .btn-primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 4px 14px rgba(37,99,235,.35)}
     .btn-secondary{background:#f1f5f9;color:#475569;margin-top:10px}
     .btn-close{background:#0f172a;color:#fff;margin-top:10px}
+    .close-fallback{display:none;background:#fefce8;border:1.5px solid #fde68a;border-radius:12px;padding:12px 14px;margin-top:12px;font-size:.84rem;color:#92400e;font-weight:600;text-align:center;line-height:1.5}
     .claimed-box{text-align:center;padding:8px 0}
     .claimed-box .name{font-size:1.05rem;font-weight:800;color:#15803d;margin-top:4px}
     .claimed-box .time{font-size:.82rem;color:#64748b;margin-top:4px}
@@ -52,7 +53,7 @@
     <p>ลิงก์รับเคสหมดอายุหรือไม่ถูกต้อง</p>
   </div>
   <div class="alert alert-error">กรุณาขอลิงก์ใหม่จากระบบแจ้งเตือน</div>
-  <button class="btn btn-close" onclick="window.close()">ปิดหน้าต่างนี้</button>
+  <button class="btn btn-close" onclick="tryClose(this)">ปิดหน้าต่างนี้</button>
 
   {% elif success %}
   {# ── Claimed successfully ── #}
@@ -85,7 +86,7 @@
     <div class="name">{{ case.claimed_by or '-' }}</div>
     <div class="time">{{ case.claimed_at }}</div>
   </div>
-  <button class="btn btn-close" style="margin-top:20px" onclick="window.close()">ปิดหน้าต่างนี้</button>
+  <button class="btn btn-close" style="margin-top:20px" onclick="tryClose(this)">ปิดหน้าต่างนี้</button>
 
   {% elif case.status == 'CLAIMED' %}
   {# ── Already claimed ── #}
@@ -120,7 +121,7 @@
       <span class="info-value">{{ case.claimed_at }}</span>
     </div>
   </div>
-  <button class="btn btn-close" onclick="window.close()">ปิดหน้าต่างนี้</button>
+  <button class="btn btn-close" onclick="tryClose(this)">ปิดหน้าต่างนี้</button>
 
   {% else %}
   {# ── Waiting to be claimed ── #}
@@ -172,9 +173,26 @@
     </div>
     <button class="btn btn-primary" type="submit">✅ ยืนยันรับเคส</button>
   </form>
-  <button class="btn btn-secondary" onclick="window.close()">ปิดหน้าต่างนี้</button>
+  <button class="btn btn-secondary" onclick="tryClose(this)">ปิดหน้าต่างนี้</button>
   {% endif %}
 
 </div>
+<div class="close-fallback" id="close-fallback">
+  ไม่สามารถปิดอัตโนมัติได้<br>
+  <button onclick="history.back()" style="margin-top:10px;padding:10px 24px;background:#0f172a;color:#fff;border:0;border-radius:10px;font-size:.9rem;font-weight:700;cursor:pointer;width:100%;">
+    ← กลับ
+  </button>
+</div>
+<script>
+function tryClose(btn) {
+  window.close();
+  setTimeout(function() {
+    if (!window.closed) {
+      document.getElementById('close-fallback').style.display = 'block';
+      if (btn) btn.style.display = 'none';
+    }
+  }, 400);
+}
+</script>
 </body>
 </html>

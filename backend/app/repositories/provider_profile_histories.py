@@ -1,6 +1,7 @@
 import json
 from sqlalchemy.orm import Session
 from app.models.provider_profile_history import ProviderProfileHistory
+from app.services.timezone_write import bangkok_now_naive
 
 def _normalize(value):
     if value is None:
@@ -33,6 +34,7 @@ def create_history(db:Session, provider_profile_id:int|None, action:str, changed
         before_json=json.dumps(_normalize(before_json), ensure_ascii=False),
         after_json=json.dumps(_normalize(after_json), ensure_ascii=False),
         diff_json=json.dumps(diff, ensure_ascii=False),
+        created_at=bangkok_now_naive(),
     )
     db.add(row)
     db.commit()

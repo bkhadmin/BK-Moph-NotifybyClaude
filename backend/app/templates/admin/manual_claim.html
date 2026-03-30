@@ -7,7 +7,34 @@
   </div>
 </div>
 
-<div class="card mt-6">
+{# ── Filter bar ── #}
+<form method="get" style="margin-top:16px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+  <div>
+    <label style="font-size:.75rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">วันที่เริ่ม</label>
+    <input type="date" name="date_from" value="{{ date_from }}"
+      style="border:1.5px solid #d1d5db;border-radius:8px;padding:7px 10px;font-size:.85rem;color:#1e3a5f;outline:none;">
+  </div>
+  <div>
+    <label style="font-size:.75rem;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">วันที่สิ้นสุด</label>
+    <input type="date" name="date_to" value="{{ date_to }}"
+      style="border:1.5px solid #d1d5db;border-radius:8px;padding:7px 10px;font-size:.85rem;color:#1e3a5f;outline:none;">
+  </div>
+  <button type="submit"
+    style="padding:8px 20px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:0;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:1px;">
+    กรอง
+  </button>
+  {% if date_from %}
+  <a href="/alerts/manual-claim"
+    style="padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.85rem;font-weight:600;color:#64748b;text-decoration:none;margin-bottom:1px;">
+    รีเซ็ต
+  </a>
+  {% endif %}
+  <span style="font-size:.82rem;color:#94a3b8;align-self:center;margin-bottom:1px;">
+    {{ alert_cases|length }} รายการ
+  </span>
+</form>
+
+<div class="card mt-4">
   <table class="table">
     <thead>
       <tr>
@@ -44,7 +71,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" class="muted">No open cases</td></tr>
+      <tr><td colspan="8" class="muted" style="text-align:center;padding:24px;">ไม่มีเคสในช่วงวันที่เลือก</td></tr>
       {% endfor %}
     </tbody>
   </table>

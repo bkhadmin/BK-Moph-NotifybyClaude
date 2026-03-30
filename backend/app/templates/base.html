@@ -6,39 +6,170 @@
   <title>BK-Moph Notify</title>
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body>
 {% if session %}
 <div class="layout">
-  <aside class="sidebar">
-    <div class="sidebar-brand">BK-Moph Notify</div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">🔔</span>
+      <span class="brand-text">BK-Moph<br><span style="font-weight:400;font-size:.75rem;opacity:.7;letter-spacing:.04em">NOTIFY</span></span>
+    </div>
+
     <nav class="sidebar-nav">
-      {% if menus.dashboard %}<a href="/dashboard">Dashboard</a>{% endif %}
-      {% if menus.logs %}<a href="/reports">Reports</a>{% endif %}
-      {% if menus.users %}<a href="/users">Users</a>{% endif %}
-      <a href="/profiles">Provider Profiles</a>
-      {% if menus.queries %}<a href="/queries">Approved Queries</a>{% endif %}
-      {% if menus.templates %}<a href="/templates">Templates</a>{% endif %}
-      {% if menus.media %}<a href="/media">Media Library</a>{% endif %}
-      {% if menus.notify %}<a href="/notify/test">MOPH Notify</a>{% endif %}
-      {% if menus.notify_rooms %}<a href="/notify/rooms">Notify Rooms</a>{% endif %}
-      {% if menus.alert_type_configs %}<a href="/alert-type-configs">Alert Type Configs</a>{% endif %}
-      {% if menus.notify %}<a href="/alerts/cases">Alert Cases</a>{% endif %}
-      {% if menus.notify %}<a href="/alerts/manual-claim">Manual Claim</a>{% endif %}
-      {% if menus.claim_notify_settings %}<a href="/settings/claim-notify">Claim Notify</a>{% endif %}
-      {% if menus.schedules %}<a href="/schedules">Schedules</a>{% endif %}
-      {% if menus.logs %}<a href="/logs/access">Logs</a>{% endif %}
-      {% if menus.logs %}<a href="/system/connections">Connections</a>{% endif %}
-      {% if menus.rbac %}<a href="/rbac">RBAC</a>{% endif %}
-      <a href="/logout">Logout</a>
+
+      {% if menus.dashboard %}
+      <a href="/dashboard" class="nav-item" data-path="/dashboard">
+        <span class="nav-icon">⊞</span> Dashboard
+      </a>
+      {% endif %}
+
+      {# ── แจ้งเตือน ── #}
+      {% if menus.notify %}
+      <div class="nav-group-label">แจ้งเตือน</div>
+      <a href="/alerts/cases" class="nav-item" data-path="/alerts/cases">
+        <span class="nav-icon">🚨</span> Alert Cases
+      </a>
+      <a href="/alerts/manual-claim" class="nav-item" data-path="/alerts/manual-claim">
+        <span class="nav-icon">✋</span> Manual Claim
+      </a>
+      <a href="/notify/test" class="nav-item" data-path="/notify/test">
+        <span class="nav-icon">📤</span> Notify Test
+      </a>
+      {% endif %}
+
+      {# ── ตั้งค่า ── #}
+      {% if menus.alert_type_configs or menus.claim_notify_settings or menus.notify_rooms or menus.schedules %}
+      <div class="nav-group-label">ตั้งค่า</div>
+      {% if menus.alert_type_configs %}
+      <a href="/alert-type-configs" class="nav-item" data-path="/alert-type-configs">
+        <span class="nav-icon">🏷</span> Alert Type Configs
+      </a>
+      {% endif %}
+      {% if menus.claim_notify_settings %}
+      <a href="/settings/claim-notify" class="nav-item" data-path="/settings/claim-notify">
+        <span class="nav-icon">💬</span> Claim Notify
+      </a>
+      {% endif %}
+      {% if menus.notify_rooms %}
+      <a href="/notify/rooms" class="nav-item" data-path="/notify/rooms">
+        <span class="nav-icon">🔔</span> Notify Rooms
+      </a>
+      {% endif %}
+      {% if menus.schedules %}
+      <a href="/schedules" class="nav-item" data-path="/schedules">
+        <span class="nav-icon">🕐</span> Schedules
+      </a>
+      <a href="/scheduler-monitor" class="nav-item" data-path="/scheduler-monitor">
+        <span class="nav-icon">📊</span> Scheduler Monitor
+      </a>
+      {% endif %}
+      {% endif %}
+
+      {# ── ข้อความ / Query ── #}
+      {% if menus.queries or menus.templates or menus.media %}
+      <div class="nav-group-label">ข้อความ</div>
+      {% if menus.queries %}
+      <a href="/queries" class="nav-item" data-path="/queries">
+        <span class="nav-icon">🗄</span> Approved Queries
+      </a>
+      {% endif %}
+      {% if menus.templates %}
+      <a href="/templates" class="nav-item" data-path="/templates">
+        <span class="nav-icon">📄</span> Templates
+      </a>
+      {% endif %}
+      {% if menus.media %}
+      <a href="/media" class="nav-item" data-path="/media">
+        <span class="nav-icon">🖼</span> Media Library
+      </a>
+      {% endif %}
+      {% endif %}
+
+      {# ── Admin ── #}
+      {% if menus.users or menus.logs or menus.rbac %}
+      <div class="nav-group-label">ระบบ</div>
+      {% if menus.users %}
+      <a href="/users" class="nav-item" data-path="/users">
+        <span class="nav-icon">👤</span> Users
+      </a>
+      {% endif %}
+      <a href="/profiles" class="nav-item" data-path="/profiles">
+        <span class="nav-icon">🪪</span> Provider Profiles
+      </a>
+      {% if menus.rbac %}
+      <a href="/rbac" class="nav-item" data-path="/rbac">
+        <span class="nav-icon">🔐</span> RBAC
+      </a>
+      {% endif %}
+      {% if menus.logs %}
+      <a href="/reports" class="nav-item" data-path="/reports">
+        <span class="nav-icon">📈</span> Reports
+      </a>
+      <a href="/logs/access" class="nav-item" data-path="/logs">
+        <span class="nav-icon">📋</span> Logs
+      </a>
+      <a href="/system/connections" class="nav-item" data-path="/system/connections">
+        <span class="nav-icon">🔌</span> Connections
+      </a>
+      {% endif %}
+      {% endif %}
+
     </nav>
+
+    <div class="sidebar-footer">
+      <a href="/logout" class="nav-logout">
+        <span class="nav-icon">↩</span> ออกจากระบบ
+      </a>
+    </div>
   </aside>
+
   <main class="content">
-    <div class="topbar"><div><strong>{{ session.display_name or session.username }}</strong><span class="muted"> · {{ session.username }}</span></div><div class="badge">{{ "Online" }}</div></div>
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('collapsed')" title="Toggle sidebar">☰</button>
+        <div class="topbar-divider"></div>
+        <div class="topbar-breadcrumb" id="topbar-breadcrumb">BK-Moph Notify</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-user">
+          <div class="user-info" style="text-align:right">
+            <div class="user-name">{{ session.display_name or session.username }}</div>
+            <div class="user-role">{{ session.username }}</div>
+          </div>
+          <div class="user-avatar">{{ (session.display_name or session.username or '?')[0]|upper }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="container">
       {% block body %}{% endblock %}
     </div>
   </main>
 </div>
+
+<script>
+(function(){
+  var path = window.location.pathname
+  document.querySelectorAll('.nav-item[data-path]').forEach(function(a){
+    var p = a.getAttribute('data-path')
+    if(path === p || (p.length > 1 && path.startsWith(p))){
+      a.classList.add('active')
+    }
+  })
+  // Breadcrumb — ใช้ข้อความจาก text node เท่านั้น (ไม่รวม icon span)
+  var active = document.querySelector('.nav-item.active')
+  var bc = document.getElementById('topbar-breadcrumb')
+  if(active && bc){
+    var label = ''
+    active.childNodes.forEach(function(n){
+      if(n.nodeType === 3) label += n.textContent
+    })
+    bc.textContent = label.trim()
+  }
+})()
+</script>
+
 {% else %}
   {% block guest_body %}{% endblock %}
 {% endif %}

@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from app.models.send_log import SendLog
+from app.services.timezone_write import bangkok_now_naive
 
 def create_log(db:Session, actor:str|None, status:str, request_payload:str|None, response_payload:str|None, detail:str|None=None, retry_count:int=0):
-    row=SendLog(actor=actor, status=status, request_payload=request_payload, response_payload=response_payload, detail=detail, retry_count=retry_count)
+    row=SendLog(actor=actor, status=status, request_payload=request_payload, response_payload=response_payload, detail=detail, retry_count=retry_count, created_at=bangkok_now_naive())
     db.add(row); db.commit(); db.refresh(row); return row
 
 def update_log_status(db:Session, row_id:int, status:str, response_payload:str|None=None, detail:str|None=None, retry_count:int|None=None):

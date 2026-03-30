@@ -1,39 +1,344 @@
 {% extends "base.html" %}
 {% block body %}
-<div class="p-6">
-  <h1 class="text-2xl font-bold">Logs & Reports</h1>
-  <form method="get" action="/logs/access" class="card mt-6">
-    <input name="q" class="input" value="{{ keyword or '' }}" placeholder="ค้นหา actor / status / detail">
-    <div class="mt-4 flex gap-4">
-      <button class="btn">Filter</button>
-      <a href="/logs/export/access?q={{ keyword or '' }}">Export Access CSV</a>
-      <a href="/logs/export/access?format=xlsx&q={{ keyword or '' }}">Export Access XLSX</a>
-      <a href="/logs/export/send?q={{ keyword or '' }}">Export Send CSV</a>
-      <a href="/logs/export/send?format=xlsx&q={{ keyword or '' }}">Export Send XLSX</a>
-      <a href="/logs/export/delivery?q={{ keyword or '' }}">Export Delivery CSV</a>
-      <a href="/logs/export/delivery?format=xlsx&q={{ keyword or '' }}">Export Delivery XLSX</a>
-    </div>
-  </form>
-  <div class="card mt-6">
-    <h3>Access Logs</h3>
-    {% for x in logs %}
-      <div class="item">{{ x.actor or "-" }} | {{ x.ip_address or "-" }} | {{ x.action }} | {{ x.status }} | {{ x.detail or "-" }}</div>
-    {% else %}<div class="muted">No logs</div>{% endfor %}
-  </div>
-  <div class="card mt-6">
-    <h3>Send Logs</h3>
-    {% for x in send_logs %}
-      <div class="item">#{{ x.id }} | {{ x.actor or "-" }} | {{ x.channel }} | {{ x.status }} | retry={{ x.retry_count }} | {{ x.detail or "-" }}</div>
-    {% else %}<div class="muted">No send logs</div>{% endfor %}
-  </div>
-  <div class="card mt-6">
-    <h3>Delivery Status</h3>
-    {% for x in delivery_statuses %}
-      <div class="item">send_log_id={{ x.send_log_id }} | {{ x.status }} | {{ x.provider_status or "-" }} | {{ x.detail or "-" }}</div>
-    {% else %}<div class="muted">No delivery status</div>{% endfor %}
-  </div>
-  <div class="card mt-6">
-    <div>Page {{ pager.page }} / {{ pager.pages }} | Total {{ pager.total }}</div>
+<style>
+/* ── Stats ── */
+.log-stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.log-stat { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px;
+  padding:14px 20px; flex:1; min-width:110px; }
+.log-stat .val { font-size:1.5rem; font-weight:900; color:#1e3a5f; line-height:1; }
+.log-stat .lbl { font-size:.7rem; font-weight:700; color:#94a3b8;
+  text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+.log-stat.success .val { color:#16a34a; }
+.log-stat.danger  .val { color:#dc2626; }
+
+/* ── Filter bar ── */
+.filter-bar { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px;
+  padding:16px 20px; margin-bottom:18px; }
+.filter-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.filter-field { display:flex; flex-direction:column; gap:4px; }
+.filter-label { font-size:.72rem; font-weight:700; color:#64748b;
+  text-transform:uppercase; letter-spacing:.04em; }
+.filter-input { border:1.5px solid #d1d5db; border-radius:8px; padding:7px 10px;
+  font-size:.83rem; color:#1e3a5f; outline:none; background:#fff; }
+.filter-input:focus { border-color:#2563eb; }
+.filter-btn { padding:8px 16px; background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  color:#fff; border:0; border-radius:8px; font-size:.83rem; font-weight:700;
+  cursor:pointer; }
+.filter-btn.clear { background:#f1f5f9; color:#64748b; }
+
+/* ── Tabs ── */
+.log-tabs { display:flex; gap:0; margin-bottom:0; border-bottom:2px solid #e5e7eb; }
+.log-tab { padding:10px 20px; font-size:.85rem; font-weight:700; color:#64748b;
+  cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px;
+  text-decoration:none; transition:color .15s; }
+.log-tab:hover { color:#2563eb; }
+.log-tab.active { color:#2563eb; border-bottom-color:#2563eb; }
+.log-tab-count { display:inline-block; background:#e5e7eb; color:#64748b;
+  border-radius:999px; padding:1px 7px; font-size:.7rem; font-weight:700; margin-left:4px; }
+.log-tab.active .log-tab-count { background:#dbeafe; color:#1d4ed8; }
+
+/* ── Table ── */
+.log-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:0 0 14px 14px;
+  border-top:none; overflow:hidden; }
+.log-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+.log-table th { background:#f8fafc; color:#94a3b8; font-size:.67rem;
+  text-transform:uppercase; letter-spacing:.06em; padding:9px 12px;
+  text-align:left; border-bottom:1.5px solid #e5e7eb; white-space:nowrap; }
+.log-table td { padding:9px 12px; border-bottom:1px solid #f1f5f9;
+  color:#1e293b; vertical-align:middle; }
+.log-table tr:last-child td { border-bottom:none; }
+.log-table tr:hover td { background:#fafbff; }
+.log-table .mono { font-family:monospace; font-size:.75rem; color:#64748b; }
+.log-table .detail-cell { max-width:260px; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; color:#64748b; font-size:.75rem; }
+
+/* ── Badges ── */
+.ls { display:inline-block; border-radius:6px; padding:2px 8px;
+  font-weight:700; font-size:.72rem; white-space:nowrap; }
+.ls-success { background:#dcfce7; color:#166534; }
+.ls-error   { background:#fee2e2; color:#991b1b; }
+.ls-blocked { background:#fef3c7; color:#92400e; }
+.ls-other   { background:#f1f5f9; color:#64748b; }
+.action-pill { display:inline-block; background:#eff6ff; color:#1d4ed8;
+  border-radius:5px; padding:1px 7px; font-size:.72rem; font-weight:600; }
+
+/* ── Pagination ── */
+.pager { display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; border-top:1.5px solid #e5e7eb; font-size:.8rem; color:#64748b; }
+.pager-links { display:flex; gap:6px; }
+.pager-btn { padding:5px 12px; border:1.5px solid #e5e7eb; border-radius:7px;
+  background:#fff; color:#1e3a5f; font-size:.8rem; font-weight:700;
+  cursor:pointer; text-decoration:none; }
+.pager-btn:hover { border-color:#2563eb; color:#2563eb; }
+.pager-btn.cur { background:#2563eb; color:#fff; border-color:#2563eb; }
+
+/* ── Export ── */
+.export-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+.export-btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px;
+  border:1.5px solid #e5e7eb; border-radius:8px; font-size:.78rem; font-weight:700;
+  color:#1e3a5f; background:#fff; text-decoration:none; transition:border-color .15s; }
+.export-btn:hover { border-color:#2563eb; color:#2563eb; }
+</style>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Logs</h1>
+    <div class="muted">ประวัติการใช้งาน การส่งข้อความ และ delivery status</div>
   </div>
 </div>
+
+{# ── Stats ── #}
+{% set as = access_stats or {} %}
+{% set ss = send_stats or {} %}
+<div class="log-stats mt-4">
+  <div class="log-stat">
+    <div class="val">{{ as.total or 0 }}</div>
+    <div class="lbl">Access Logs ทั้งหมด</div>
+  </div>
+  <div class="log-stat success">
+    <div class="val">{{ as.success or 0 }}</div>
+    <div class="lbl">Access สำเร็จ</div>
+  </div>
+  <div class="log-stat danger">
+    <div class="val">{{ as.fail or 0 }}</div>
+    <div class="lbl">Access ล้มเหลว/ถูกบล็อก</div>
+  </div>
+  <div class="log-stat">
+    <div class="val">{{ ss.total or 0 }}</div>
+    <div class="lbl">Send Logs ทั้งหมด</div>
+  </div>
+  <div class="log-stat success">
+    <div class="val">{{ ss.success or 0 }}</div>
+    <div class="lbl">ส่งสำเร็จ</div>
+  </div>
+  <div class="log-stat danger">
+    <div class="val">{{ ss.fail or 0 }}</div>
+    <div class="lbl">ส่งล้มเหลว</div>
+  </div>
+</div>
+
+{# ── Filter ── #}
+<form method="get" action="/logs/access" class="filter-bar">
+  <div class="filter-row">
+    <div class="filter-field">
+      <span class="filter-label">วันที่เริ่ม</span>
+      <input type="date" name="date_from" class="filter-input" value="{{ date_from or '' }}">
+    </div>
+    <div class="filter-field">
+      <span class="filter-label">วันที่สิ้นสุด</span>
+      <input type="date" name="date_to" class="filter-input" value="{{ date_to or '' }}">
+    </div>
+    <div class="filter-field">
+      <span class="filter-label">ค้นหา</span>
+      <input name="q" class="filter-input" value="{{ keyword or '' }}"
+        placeholder="username / action / detail..." style="width:180px">
+    </div>
+    <div class="filter-field">
+      <span class="filter-label">Status</span>
+      <select name="status_filter" class="filter-input">
+        <option value="">ทั้งหมด</option>
+        {% for s in (access_stats.statuses or []) %}
+        <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <span class="filter-label">Action</span>
+      <select name="action_filter" class="filter-input">
+        <option value="">ทั้งหมด</option>
+        {% for a in (access_stats.actions or []) %}
+        <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input type="hidden" name="tab" value="{{ tab or 'access' }}">
+    <button type="submit" class="filter-btn">🔍 กรอง</button>
+    <a href="/logs/access" class="filter-btn clear">✕ ล้าง</a>
+  </div>
+</form>
+
+{# ── Tabs ── #}
+<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:14px 14px 0 0;padding:0 8px;">
+  <div class="log-tabs">
+    <a href="?q={{ keyword or '' }}&status_filter={{ status_filter or '' }}&action_filter={{ action_filter or '' }}&tab=access"
+      class="log-tab {% if (tab or 'access') == 'access' %}active{% endif %}">
+      🔑 Access Logs
+      <span class="log-tab-count">{{ pager.total if pager else 0 }}</span>
+    </a>
+    <a href="?q={{ keyword or '' }}&status_filter={{ status_filter or '' }}&tab=send"
+      class="log-tab {% if tab == 'send' %}active{% endif %}">
+      📤 Send Logs
+      <span class="log-tab-count">{{ send_pager.total if send_pager else 0 }}</span>
+    </a>
+    <a href="?q={{ keyword or '' }}&status_filter={{ status_filter or '' }}&tab=delivery"
+      class="log-tab {% if tab == 'delivery' %}active{% endif %}">
+      📬 Delivery Status
+      <span class="log-tab-count">{{ delivery_statuses|length }}</span>
+    </a>
+  </div>
+</div>
+
+{# ── Tab content ── #}
+<div class="log-card">
+
+  {# Access Logs #}
+  {% if (tab or 'access') == 'access' %}
+  <table class="log-table">
+    <thead>
+      <tr>
+        <th>วันที่/เวลา</th>
+        <th>Username</th>
+        <th>IP</th>
+        <th>Action</th>
+        <th>Status</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for x in logs or [] %}
+      <tr>
+        <td class="mono" style="white-space:nowrap;color:#64748b;font-size:.73rem;">
+          {{ x.created_at|thaidt if x.created_at else '-' }}
+        </td>
+        <td style="font-weight:700;color:#1e3a5f;">{{ x.username or '-' }}</td>
+        <td class="mono">{{ x.ip_address or '-' }}</td>
+        <td><span class="action-pill">{{ x.action or '-' }}</span></td>
+        <td>
+          {% set s = (x.status or '')|lower %}
+          {% if s in ('success','ok') %}
+          <span class="ls ls-success">{{ x.status }}</span>
+          {% elif s in ('fail','error','failed') %}
+          <span class="ls ls-error">{{ x.status }}</span>
+          {% elif s == 'blocked' %}
+          <span class="ls ls-blocked">{{ x.status }}</span>
+          {% else %}
+          <span class="ls ls-other">{{ x.status or '-' }}</span>
+          {% endif %}
+        </td>
+        <td class="detail-cell" title="{{ x.detail or '' }}">{{ x.detail or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="color:#94a3b8;padding:20px;text-align:center;">ไม่มีข้อมูล</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Send Logs #}
+  {% elif tab == 'send' %}
+  <table class="log-table">
+    <thead>
+      <tr>
+        <th>วันที่/เวลา</th>
+        <th>ID</th>
+        <th>Actor</th>
+        <th>Channel</th>
+        <th>Status</th>
+        <th>Retry</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for x in send_logs or [] %}
+      <tr>
+        <td class="mono" style="white-space:nowrap;color:#64748b;font-size:.73rem;">
+          {{ x.created_at|thaidt if x.created_at else '-' }}
+        </td>
+        <td class="mono" style="color:#cbd5e1;">#{{ x.id }}</td>
+        <td style="font-weight:700;color:#1e3a5f;">{{ x.username or '-' }}</td>
+        <td><span class="action-pill">{{ x.channel or '-' }}</span></td>
+        <td>
+          {% set s = (x.status or '')|lower %}
+          {% if s in ('success','sent','ok') %}
+          <span class="ls ls-success">{{ x.status }}</span>
+          {% elif s in ('fail','error','failed') %}
+          <span class="ls ls-error">{{ x.status }}</span>
+          {% else %}
+          <span class="ls ls-other">{{ x.status or '-' }}</span>
+          {% endif %}
+        </td>
+        <td style="text-align:center;">
+          {% if x.retry_count %}
+          <span style="color:#d97706;font-weight:700;">{{ x.retry_count }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="detail-cell" title="{{ x.detail or '' }}">{{ x.detail or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:#94a3b8;padding:20px;text-align:center;">ไม่มีข้อมูล</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Delivery Status #}
+  {% elif tab == 'delivery' %}
+  <table class="log-table">
+    <thead>
+      <tr>
+        <th>Send Log ID</th>
+        <th>External Message ID</th>
+        <th>Status</th>
+        <th>Provider Status</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for x in delivery_statuses or [] %}
+      <tr>
+        <td class="mono">#{{ x.send_log_id }}</td>
+        <td class="mono" style="font-size:.72rem;">{{ x.external_message_id or '-' }}</td>
+        <td>
+          {% set s = (x.status or '')|lower %}
+          {% if s in ('success','delivered','ok') %}
+          <span class="ls ls-success">{{ x.status }}</span>
+          {% elif s in ('fail','error','failed') %}
+          <span class="ls ls-error">{{ x.status }}</span>
+          {% else %}
+          <span class="ls ls-other">{{ x.status or '-' }}</span>
+          {% endif %}
+        </td>
+        <td class="mono" style="font-size:.72rem;">{{ x.provider_status or '-' }}</td>
+        <td class="detail-cell" title="{{ x.detail or '' }}">{{ x.detail or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:#94a3b8;padding:20px;text-align:center;">ไม่มีข้อมูล</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {# Pagination #}
+  {% if pager and pager.pages > 1 and (tab or 'access') == 'access' %}
+  <div class="pager">
+    <div>แสดง {{ logs|length }} จาก {{ pager.total }} รายการ (หน้า {{ pager.page }}/{{ pager.pages }})</div>
+    <div class="pager-links">
+      {% if pager.page > 1 %}
+      <a href="?q={{ keyword or '' }}&status_filter={{ status_filter or '' }}&action_filter={{ action_filter or '' }}&tab={{ tab or 'access' }}&page={{ pager.page - 1 }}" class="pager-btn">‹ ก่อนหน้า</a>
+      {% endif %}
+      {% for p in range(1, pager.pages + 1) %}
+        {% if p == pager.page %}
+        <span class="pager-btn cur">{{ p }}</span>
+        {% elif p <= 3 or p >= pager.pages - 1 or (p >= pager.page - 1 and p <= pager.page + 1) %}
+        <a href="?q={{ keyword or '' }}&status_filter={{ status_filter or '' }}&action_filter={{ action_filter or '' }}&tab={{ tab or 'access' }}&page={{ p }}" class="pager-btn">{{ p }}</a>
+        {% elif p == 4 and pager.page > 5 %}
+        <span style="padding:5px 4px;color:#94a3b8;">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if pager.page < pager.pages %}
+      <a href="?q={{ keyword or '' }}&status_filter={{ status_filter or '' }}&action_filter={{ action_filter or '' }}&tab={{ tab or 'access' }}&page={{ pager.page + 1 }}" class="pager-btn">ถัดไป ›</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# Export #}
+<div class="export-row mt-4">
+  <a href="/logs/export/access?q={{ keyword or '' }}" class="export-btn">📥 Access CSV</a>
+  <a href="/logs/export/access?format=xlsx&q={{ keyword or '' }}" class="export-btn">📊 Access XLSX</a>
+  <a href="/logs/export/send?q={{ keyword or '' }}" class="export-btn">📥 Send CSV</a>
+  <a href="/logs/export/send?format=xlsx&q={{ keyword or '' }}" class="export-btn">📊 Send XLSX</a>
+  <a href="/logs/export/delivery?q={{ keyword or '' }}" class="export-btn">📥 Delivery CSV</a>
+</div>
+
 {% endblock %}

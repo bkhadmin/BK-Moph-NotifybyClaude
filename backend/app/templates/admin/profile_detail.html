@@ -1,32 +1,250 @@
 {% extends "base.html" %}
 {% block body %}
+<style>
+.pd-header { background:#fff; border:1.5px solid #e5e7eb; border-radius:16px;
+  padding:22px 26px; display:flex; align-items:center; gap:20px; }
+.pd-avatar { width:60px; height:60px; border-radius:50%;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  color:#fff; font-size:1.4rem; font-weight:800;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pd-name { font-size:1.2rem; font-weight:800; color:#0f172a; }
+.pd-sub  { font-size:.82rem; color:#64748b; margin-top:3px; }
+.pd-badge { display:inline-block; background:#eff6ff; color:#1d4ed8;
+  border-radius:6px; padding:2px 10px; font-size:.75rem; font-weight:700; margin-top:5px; }
+
+.pd-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:860px){ .pd-grid { grid-template-columns:1fr; } }
+
+.pd-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:14px; padding:20px 22px; }
+.pd-card h3 { font-size:.88rem; font-weight:800; color:#1e3a5f; margin:0 0 16px;
+  padding-bottom:10px; border-bottom:1px solid #f1f5f9; }
+
+.pd-field { margin-bottom:14px; }
+.pd-label { font-size:.72rem; font-weight:700; color:#94a3b8;
+  text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.pd-value { font-size:.88rem; color:#1e3a5f; font-weight:600; }
+.pd-value.empty { color:#cbd5e1; font-weight:400; font-style:italic; }
+
+.pd-input { width:100%; border:1.5px solid #d1d5db; border-radius:8px;
+  padding:8px 11px; font-size:.85rem; color:#1e3a5f; outline:none;
+  background:#fff; box-sizing:border-box; }
+.pd-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.pd-save-btn { padding:9px 22px; background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  color:#fff; border:0; border-radius:10px; font-size:.85rem; font-weight:700;
+  cursor:pointer; margin-top:4px; }
+.pd-save-btn:hover { opacity:.88; }
+
+/* History */
+.hist-item { padding:14px 0; border-bottom:1px solid #f1f5f9; }
+.hist-item:last-child { border-bottom:none; }
+.hist-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.hist-action { display:inline-block; background:#eff6ff; color:#1d4ed8;
+  border-radius:6px; padding:2px 9px; font-size:.75rem; font-weight:700; }
+.hist-by { font-size:.78rem; color:#64748b; }
+.hist-diff { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media(max-width:600px){ .hist-diff { grid-template-columns:1fr; } }
+.hist-box { border-radius:8px; padding:10px 12px; font-size:.75rem; }
+.hist-box.before { background:#fef2f2; border:1px solid #fecaca; }
+.hist-box.after  { background:#f0fdf4; border:1px solid #bbf7d0; }
+.hist-box-label { font-size:.67rem; font-weight:800; text-transform:uppercase;
+  letter-spacing:.06em; margin-bottom:6px; }
+.hist-box.before .hist-box-label { color:#991b1b; }
+.hist-box.after  .hist-box-label { color:#166534; }
+.hist-kv { display:flex; justify-content:space-between; gap:8px;
+  padding:3px 0; border-bottom:1px solid rgba(0,0,0,.05); }
+.hist-kv:last-child { border-bottom:none; }
+.hist-k { color:#64748b; flex-shrink:0; }
+.hist-v { font-weight:700; text-align:right; word-break:break-all; }
+.hist-box.before .hist-v { color:#b91c1c; }
+.hist-box.after  .hist-v { color:#15803d; }
+
+/* Raw JSON collapsible */
+.raw-toggle { background:none; border:none; font-size:.78rem; font-weight:700;
+  color:#2563eb; cursor:pointer; padding:0; display:flex; align-items:center; gap:4px; }
+.raw-toggle::before { content:'▸'; transition:transform .2s; }
+.raw-toggle.open::before { transform:rotate(90deg); }
+.raw-body { display:none; margin-top:10px; }
+.raw-body.open { display:block; }
+.raw-pre { background:#0f172a; color:#e2e8f0; border-radius:10px; padding:12px;
+  font-size:.75rem; font-family:monospace; overflow-x:auto; max-height:300px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; }
+</style>
+
 <div class="page-header">
-  <h1 class="page-title">Provider Profile Detail</h1>
-</div>
-<div class="grid-2 mt-6">
-  <form method="post" action="/profiles/{{ profile.id }}" class="card">
-    <div class="kv"><span>Provider ID</span><strong>{{ profile.provider_id or "-" }}</strong></div>
-    <div class="mt-3"><label>Name</label><input class="input" name="name_th" value="{{ profile.name_th or '' }}"></div>
-    <div class="mt-3"><label>Position</label><input class="input" name="position_name" value="{{ profile.position_name or '' }}"></div>
-    <div class="mt-3"><label>Organization</label><input class="input" name="organization_name" value="{{ profile.organization_name or '' }}"></div>
-    <div class="mt-3"><label>Organization Code</label><input class="input" name="organization_code" value="{{ profile.organization_code or '' }}"></div>
-    <div class="mt-3"><label>License No</label><input class="input" name="license_no" value="{{ profile.license_no or '' }}"></div>
-    <div class="mt-3"><label>Phone</label><input class="input" name="phone" value="{{ profile.phone or '' }}"></div>
-    <div class="mt-3"><label>Email</label><input class="input" name="email" value="{{ profile.email or '' }}"></div>
-    <button class="btn mt-4">Update Profile</button>
-  </form>
-  <div class="card">
-    <div class="muted">Raw JSON</div>
-    <div class="json-box mt-3"><pre>{{ pretty_json(profile.raw_json) }}</pre></div>
+  <div>
+    <a href="/profiles" style="font-size:.82rem;color:#64748b;font-weight:600;">← กลับหน้า Profiles</a>
+    <h1 class="page-title" style="margin-top:4px;">Provider Profile</h1>
+  </div>
+  <div class="page-actions">
+    {% if profile.raw_json %}
+    <form method="post" action="/profiles/{{ profile.id }}/sync-from-raw" style="margin:0">
+      <button type="submit" style="padding:9px 18px;border:1.5px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:.85rem;font-weight:700;cursor:pointer;"
+        onclick="return confirm('ดึงข้อมูลจาก Provider JSON มาเติมทุก field ใหม่ ข้อมูลที่แก้ไขด้วยตนเองอาจถูกทับ ยืนยัน?')">
+        🔄 Sync จาก Provider JSON
+      </button>
+    </form>
+    {% endif %}
   </div>
 </div>
-<div class="card mt-6">
-  <div class="muted">Update History</div>
-  {% for h in history_rows %}
-    <div class="item">
-      <strong>{{ h.action }}</strong> by {{ h.changed_by or "-" }}
-      <div class="json-box mt-3"><pre>{{ pretty_json(h.diff_json) }}</pre></div>
-    </div>
-  {% else %}<div class="muted">No history</div>{% endfor %}
+
+{% if request.query_params.get('synced') %}
+<div style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:12px;padding:13px 16px;margin-top:12px;font-weight:700;">
+  ✅ Sync ข้อมูลจาก Provider JSON เรียบร้อยแล้ว
 </div>
+{% endif %}
+
+{# ── Header card ── #}
+{% set display = profile.name_th or ((profile.first_name or '') ~ ' ' ~ (profile.last_name or '')) | trim or 'ไม่ระบุชื่อ' %}
+{% set initial = display[0]|upper if display else '?' %}
+<div class="pd-header mt-4">
+  <div class="pd-avatar">{{ initial }}</div>
+  <div>
+    <div class="pd-name">{{ display }}</div>
+    <div class="pd-sub">{{ profile.position_name or '' }}{% if profile.organization_name %} · {{ profile.organization_name }}{% endif %}</div>
+    {% if profile.provider_id %}
+    <span class="pd-badge">Provider ID: {{ profile.provider_id }}</span>
+    {% endif %}
+    {% if profile.license_no %}
+    <span class="pd-badge" style="background:#f0fdf4;color:#166534;margin-left:4px;">ใบอนุญาต: {{ profile.license_no }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="pd-grid mt-4">
+
+  {# ── ข้อมูลแสดง ── #}
+  <div class="pd-card">
+    <h3>ข้อมูลโปรไฟล์</h3>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px;">
+      {% macro field(label, value) %}
+      <div class="pd-field">
+        <div class="pd-label">{{ label }}</div>
+        <div class="pd-value {% if not value %}empty{% endif %}">{{ value or '—' }}</div>
+      </div>
+      {% endmacro %}
+      {{ field('ชื่อ-นามสกุล (ไทย)', profile.name_th) }}
+      {{ field('ชื่อ', profile.first_name) }}
+      {{ field('นามสกุล', profile.last_name) }}
+      {{ field('คำนำหน้า', profile.title_name) }}
+      {{ field('ตำแหน่ง', profile.position_name) }}
+      {{ field('หน่วยงาน', profile.organization_name) }}
+      {{ field('รหัสหน่วยงาน', profile.organization_code) }}
+      {{ field('เลขใบอนุญาต', profile.license_no) }}
+      {{ field('โทรศัพท์', profile.phone) }}
+      {{ field('อีเมล', profile.email) }}
+      {{ field('Account ID', profile.account_id) }}
+      {{ field('Provider ID', profile.provider_id) }}
+    </div>
+
+    {# Raw JSON collapsible #}
+    {% if profile.raw_json %}
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9;">
+      <button class="raw-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        Raw JSON จาก Provider
+      </button>
+      <div class="raw-body">
+        <div class="raw-pre">{{ pretty_json(profile.raw_json) }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── แก้ไขข้อมูล ── #}
+  <div class="pd-card">
+    <h3>แก้ไขข้อมูล</h3>
+    <form method="post" action="/profiles/{{ profile.id }}">
+      {% macro edit_field(label, name, value) %}
+      <div class="pd-field">
+        <div class="pd-label">{{ label }}</div>
+        <input class="pd-input" name="{{ name }}" value="{{ value or '' }}">
+      </div>
+      {% endmacro %}
+      {{ edit_field('ชื่อ-นามสกุล (ไทย)', 'name_th', profile.name_th) }}
+      {{ edit_field('ตำแหน่ง', 'position_name', profile.position_name) }}
+      {{ edit_field('หน่วยงาน', 'organization_name', profile.organization_name) }}
+      {{ edit_field('รหัสหน่วยงาน', 'organization_code', profile.organization_code) }}
+      {{ edit_field('เลขใบอนุญาต', 'license_no', profile.license_no) }}
+      {{ edit_field('โทรศัพท์', 'phone', profile.phone) }}
+      {{ edit_field('อีเมล', 'email', profile.email) }}
+      <button class="pd-save-btn">💾 บันทึก</button>
+    </form>
+  </div>
+
+</div>
+
+{# ── History ── #}
+<div class="pd-card mt-4">
+  <h3>ประวัติการเปลี่ยนแปลง <span style="font-size:.75rem;font-weight:400;color:#94a3b8;">({{ history_rows|length }} รายการ)</span></h3>
+  {% for h in history_rows %}
+  <div class="hist-item">
+    <div class="hist-header">
+      <span class="hist-action">{{ h.action }}</span>
+      <span class="hist-by">โดย {{ h.changed_by or 'ระบบ' }}</span>
+      {% if h.created_at %}<span style="font-size:.73rem;color:#94a3b8;margin-left:auto;">{{ h.created_at | thaidt }}</span>{% endif %}
+    </div>
+    {% set before = {} %}
+    {% set after  = {} %}
+    {% if h.diff_json %}
+      {% set parsed = h.diff_json | from_json_safe %}
+      {% if parsed is mapping and parsed %}
+        {# diff_json is a dict of changed fields #}
+        <div class="hist-diff">
+          <div class="hist-box before">
+            <div class="hist-box-label">ก่อน</div>
+            {% for k, v in parsed.items() %}
+              {% if v is mapping and v.before is defined %}
+              <div class="hist-kv">
+                <span class="hist-k">{{ k }}</span>
+                <span class="hist-v">{{ v.before or '—' }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <div class="hist-box after">
+            <div class="hist-box-label">หลัง</div>
+            {% for k, v in parsed.items() %}
+              {% if v is mapping and v.after is defined %}
+              <div class="hist-kv">
+                <span class="hist-k">{{ k }}</span>
+                <span class="hist-v">{{ v.after or '—' }}</span>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% elif parsed is mapping and not parsed %}
+        <div style="font-size:.78rem;color:#94a3b8;font-style:italic;padding:4px 0;">ไม่มีการเปลี่ยนแปลงข้อมูล (ข้อมูลเหมือนเดิม)</div>
+      {% else %}
+        <div class="raw-pre" style="margin-top:6px;">{{ h.diff_json }}</div>
+      {% endif %}
+    {% endif %}
+    {% if h.before_json or h.after_json %}
+    <div style="margin-top:8px;">
+      <button class="raw-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')" style="font-size:.72rem;">
+        ดู JSON เต็ม
+      </button>
+      <div class="raw-body">
+        <div class="hist-diff" style="margin-top:6px;">
+          {% if h.before_json %}
+          <div>
+            <div style="font-size:.67rem;font-weight:800;color:#991b1b;margin-bottom:4px;">BEFORE</div>
+            <div class="raw-pre">{{ pretty_json(h.before_json) }}</div>
+          </div>
+          {% endif %}
+          {% if h.after_json %}
+          <div>
+            <div style="font-size:.67rem;font-weight:800;color:#166534;margin-bottom:4px;">AFTER</div>
+            <div class="raw-pre">{{ pretty_json(h.after_json) }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div style="color:#94a3b8;font-size:.85rem;padding:8px 0;">ยังไม่มีประวัติการเปลี่ยนแปลง</div>
+  {% endfor %}
+</div>
+
 {% endblock %}
