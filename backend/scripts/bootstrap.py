@@ -81,6 +81,13 @@ def ensure_schema():
             conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) NULL"))
         except Exception:
             pass
+        try:
+            conn.execute(text("""CREATE TABLE IF NOT EXISTS app_settings (
+                `key` VARCHAR(100) PRIMARY KEY,
+                `value` TEXT NULL
+            ) CHARACTER SET utf8mb4"""))
+        except Exception:
+            pass
 
 def seed():
     Base.metadata.create_all(bind=engine)

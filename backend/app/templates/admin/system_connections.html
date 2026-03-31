@@ -203,4 +203,23 @@
   </div>
 
 </div>
+
+{# ── SSO URL Settings ── #}
+<div class="card mt-6" style="max-width:560px;">
+  <div style="font-size:.95rem;font-weight:800;color:#1e3a5f;margin-bottom:4px;">⚙️ ตั้งค่า URL ระบบกลาง (SSO)</div>
+  <div class="muted" style="font-size:.82rem;margin-bottom:16px;">กำหนด URL ของ Provider Login ที่ปุ่ม SSO บนหน้า Login จะชี้ไป</div>
+  {% if request.query_params.get('saved') %}
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:10px 14px;font-size:.85rem;margin-bottom:14px;">✅ บันทึกเรียบร้อย</div>
+  {% endif %}
+  <form method="post" action="/system/connections/settings" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+    <div style="flex:1;min-width:240px;">
+      <label style="font-size:.8rem;font-weight:700;color:#475569;display:block;margin-bottom:6px;">Provider Login URL</label>
+      <input class="input" name="providerlogin_url" value="{{ providerlogin_url_cfg }}"
+             placeholder="http://192.168.x.x:3000" style="width:100%;box-sizing:border-box;">
+    </div>
+    <button class="btn" type="submit" style="white-space:nowrap;">บันทึก</button>
+  </form>
+  <div class="muted" style="font-size:.75rem;margin-top:8px;">ค่า default จาก .env: <code>{{ settings.providerlogin_url if settings else '-' }}</code></div>
+</div>
+
 {% endblock %}

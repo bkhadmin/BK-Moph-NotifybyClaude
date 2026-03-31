@@ -16,3 +16,4 @@ from app.models.provider_profile_history import ProviderProfileHistory
 
 from app.models.alert_case import AlertCase
 from app.models.alert_type_config import AlertTypeConfig
+from app.models.app_setting import AppSetting

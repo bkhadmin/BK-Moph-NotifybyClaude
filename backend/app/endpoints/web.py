@@ -269,7 +269,15 @@ def ctx(request:Request, db:Session, session:dict|None, **extra):
     data.update(extra)
     return data
 
-def render_login(request:Request, error:str|None=None):
+def render_login(request:Request, error:str|None=None, db=None):
+    from app.repositories.app_settings import get as get_setting
+    from app.db.session import SessionLocal
+    _db = db or SessionLocal()
+    try:
+        sso_url = get_setting(_db, 'providerlogin_url') or settings.providerlogin_url
+    finally:
+        if not db:
+            _db.close()
     token=new_token()
     ctx={
         'request':request,
@@ -277,7 +285,7 @@ def render_login(request:Request, error:str|None=None):
         'error':error,
         'provider_login_enabled':settings.provider_login_enabled,
         'sso_enabled':settings.sso_enabled and bool(settings.sso_jwt_secret),
-        'providerlogin_url':getattr(settings,'providerlogin_url','http://localhost:3000'),
+        'providerlogin_url': sso_url,
     }
     response=templates.TemplateResponse('auth/login.html', ctx)
     response.set_cookie(settings.csrf_cookie_name, token, httponly=False, samesite=settings.session_cookie_samesite, path='/')
@@ -529,7 +537,24 @@ async def system_connections(request:Request, db:Session=Depends(get_db)):
         notify_result = await moph_notify_health_check()
     except Exception as exc:
         notify_result = {"status": "failed", "detail": str(exc)}
-    return templates.TemplateResponse('admin/system_connections.html', ctx(request, db, session, hosxp_result=hosxp_result, provider_result=provider_result, notify_result=notify_result))
+    from app.repositories.app_settings import get as get_setting
+    providerlogin_url_cfg = get_setting(db, 'providerlogin_url') or settings.providerlogin_url
+    return templates.TemplateResponse('admin/system_connections.html', ctx(
+        request, db, session,
+        hosxp_result=hosxp_result, provider_result=provider_result, notify_result=notify_result,
+        providerlogin_url_cfg=providerlogin_url_cfg,
+        settings=settings,
+    ))
+
+@router.post('/system/connections/settings')
+def system_connections_save(request: Request, providerlogin_url: str = Form(''), db: Session = Depends(get_db)):
+    session = require_session(request)
+    if not allowed_menu(db, session.get('role_id'), 'logs'):
+        raise HTTPException(status_code=403, detail='forbidden')
+    from app.repositories.app_settings import set as set_setting
+    set_setting(db, 'providerlogin_url', providerlogin_url.strip())
+    write_log(db, session.get('username'), client_ip(request), 'system.settings.save', 'success', 'providerlogin_url')
+    return RedirectResponse('/system/connections?saved=1', status_code=302)
 
 @router.get('/help')
 def help_page(request:Request, db:Session=Depends(get_db)):

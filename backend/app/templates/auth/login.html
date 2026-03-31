@@ -1,28 +1,186 @@
 {% extends "base.html" %}
 {% block guest_body %}
-<div class="guest-wrap">
+<style>
+.login-bg {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #0f4c81 0%, #1a7a5e 50%, #0d6e4f 100%);
+  position: relative;
+  overflow: hidden;
+}
+.login-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 36px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
+  position: relative;
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 8px;
+}
+.login-logo-icon {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, #1a7a5e, #0f4c81);
+  border-radius: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.8rem;
+  box-shadow: 0 8px 20px rgba(15,76,129,.3);
+  margin-bottom: 12px;
+}
+.login-title {
+  font-size: 1.3rem; font-weight: 800; color: #0f172a;
+  margin: 0 0 4px;
+}
+.login-sub {
+  font-size: .82rem; color: #64748b; margin: 0 0 24px;
+}
+.login-divider {
+  display: flex; align-items: center; gap: 12px;
+  color: #94a3b8; font-size: .78rem; margin: 16px 0;
+}
+.login-divider::before, .login-divider::after {
+  content: ''; flex: 1; height: 1px; background: #e2e8f0;
+}
+.input-wrap { position: relative; margin-bottom: 12px; }
+.input-wrap .input-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: #94a3b8; font-size: .95rem; pointer-events: none;
+}
+.input-wrap input {
+  width: 100%; box-sizing: border-box;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  padding: 11px 14px 11px 40px;
+  font-size: .9rem; color: #0f172a;
+  outline: none; transition: border-color .15s, box-shadow .15s;
+  font-family: inherit;
+}
+.input-wrap input:focus {
+  border-color: #1a7a5e;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.12);
+}
+.btn-login {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #1a7a5e, #0f4c81);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: .95rem; font-weight: 700; cursor: pointer;
+  margin-top: 4px; transition: opacity .15s, transform .1s;
+  font-family: inherit;
+}
+.btn-login:hover { opacity: .92; transform: translateY(-1px); }
+.btn-login:active { transform: translateY(0); }
+
+.btn-provider-id {
+  width: 100%; padding: 11px 16px;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: .88rem; font-weight: 700; color: #1a6b3c;
+  cursor: pointer; text-decoration: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+  font-family: inherit;
+}
+.btn-provider-id:hover {
+  border-color: #1a7a5e;
+  box-shadow: 0 2px 12px rgba(26,122,94,.15);
+  background: #f0fdf9;
+}
+.btn-sso {
+  width: 100%; padding: 11px 16px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  border: none; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: .88rem; font-weight: 700; color: #fff;
+  cursor: pointer; text-decoration: none;
+  transition: opacity .15s; margin-bottom: 8px;
+}
+.btn-sso:hover { opacity: .9; }
+
+.provider-id-svg { width: 88px; height: auto; }
+.alert.error {
+  background: #fef2f2; border: 1px solid #fecaca;
+  color: #991b1b; border-radius: 10px; padding: 10px 14px;
+  font-size: .85rem; margin-bottom: 16px;
+}
+</style>
+
+<div class="login-bg">
   <div class="login-card">
-    <h1 class="page-title">BK-Moph Notify</h1>
-    <p class="muted mt-3">เข้าสู่ระบบผู้ดูแลและผู้ใช้งาน</p>
-    {% if error %}<div class="alert error mt-4">{{ error }}</div>{% endif %}
-    <form method="post" action="/login" class="mt-6 stack">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input name="username" placeholder="Username" class="input">
-      <input type="password" name="password" placeholder="Password" class="input">
-      <button type="submit" class="btn">Login</button>
-    </form>
-    <div class="mt-4 stack">
-      {% if sso_enabled %}
-      <a href="{{ providerlogin_url }}" class="btn" style="background:#d97706;border-color:#d97706;text-align:center">
-        🏥 เข้าสู่ระบบผ่านระบบกลาง (SSO)
-      </a>
-      <div class="muted" style="text-align:center;font-size:.8rem">หรือ</div>
-      {% endif %}
-      <a href="/auth/provider/login">Login with Provider ID (Health ID)</a>
-      {% if not provider_login_enabled %}
-      <div class="muted mt-3">Provider login scaffold mode</div>
-      {% endif %}
+
+    <div class="login-logo">
+      <div class="login-logo-icon">🏥</div>
+      <h1 class="login-title">BK-Moph Notify</h1>
+      <p class="login-sub">ระบบแจ้งเตือนผลวิกฤต โรงพยาบาลบ้านแพ้ว</p>
     </div>
+
+    {% if error %}
+    <div class="alert error">⚠️ {{ error }}</div>
+    {% endif %}
+
+    {% if sso_enabled %}
+    <a href="{{ providerlogin_url }}" class="btn-sso">
+      🏥 เข้าสู่ระบบผ่านระบบกลาง (SSO)
+    </a>
+    {% endif %}
+
+    <a href="/auth/provider/login" class="btn-provider-id">
+      {# Provider ID Logo SVG #}
+      <svg class="provider-id-svg" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="pg1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#1a8a4a"/>
+            <stop offset="100%" style="stop-color:#c8d400"/>
+          </linearGradient>
+          <linearGradient id="pg2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#0f6e3a"/>
+            <stop offset="100%" style="stop-color:#1a8a4a"/>
+          </linearGradient>
+        </defs>
+        <!-- Shield shape -->
+        <path d="M8 10 Q8 6 12 6 L44 6 Q52 6 56 14 L60 24 Q62 30 56 38 L44 52 Q38 58 30 58 Q22 58 16 52 L4 38 Q-2 30 0 24 L4 14 Q6 10 8 10Z"
+              fill="url(#pg1)" opacity="0.15"/>
+        <!-- Plus symbol -->
+        <rect x="26" y="16" width="8" height="28" rx="2" fill="url(#pg2)"/>
+        <rect x="16" y="26" width="28" height="8" rx="2" fill="url(#pg2)"/>
+        <!-- Text PROVIDER -->
+        <text x="72" y="28" font-family="Arial,sans-serif" font-size="15" font-weight="900"
+              fill="#1a6b3c" letter-spacing="1">PROVIDER</text>
+        <!-- Text ID -->
+        <text x="72" y="48" font-family="Arial,sans-serif" font-size="22" font-weight="900"
+              fill="#0a5c2e" letter-spacing="2">ID</text>
+        <!-- Swoosh line -->
+        <path d="M72 52 Q120 58 168 50" stroke="#c8d400" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span style="color:#1a6b3c;">เข้าสู่ระบบ</span>
+    </a>
+
+    <div class="login-divider">เข้าสู่ระบบด้วย Admin Account</div>
+
+    <form method="post" action="/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input name="username" placeholder="Username" autocomplete="username">
+      </div>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input type="password" name="password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+    </form>
+
   </div>
 </div>
 {% endblock %}
