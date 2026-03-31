@@ -67,12 +67,42 @@
 ]'>{{ (edit_row.display_lines or '') if edit_row else '' }}</textarea>
     </div>
     <div class="mt-3">
-      <label>Claim Notify Template <span class="muted">(ข้อความตอบกลับหลังรับเคส — ว่างจะใช้ค่า default)</span></label>
+      <label>ประเภทข้อความตอบกลับ (Claim Notify Type)</label>
+      <select class="input" name="claim_notify_type" id="claim_notify_type" onchange="toggleNotifyType(this.value)">
+        <option value="text" {% if not edit_row or (edit_row.claim_notify_type or 'text') == 'text' %}selected{% endif %}>💬 Text — ข้อความธรรมดา</option>
+        <option value="flex" {% if edit_row and edit_row.claim_notify_type == 'flex' %}selected{% endif %}>🎨 Flex Message — การ์ดสวยงาม</option>
+      </select>
+    </div>
+    <div class="mt-3" id="hint-text" style="{{ 'display:none' if edit_row and edit_row.claim_notify_type == 'flex' else '' }}">
       <div class="muted" style="font-size:.8rem;margin-bottom:6px;">
         ตัวแปร: <code>{patient_name}</code>, <code>{patient_hn}</code>, <code>{item_name}</code>, <code>{item_value}</code>,
-        <code>{department}</code>, <code>{claimed_by}</code>, <code>{claimed_at}</code>
+        <code>{department}</code>, <code>{claimed_by}</code>, <code>{claimed_at}</code> และทุก column จาก query
       </div>
-      <textarea class="textarea" name="claim_notify_template" rows="7" placeholder="✅ รับเคสเรียบร้อย&#10;&#10;ผู้ป่วย: {patient_name}&#10;HN: {patient_hn}&#10;ชื่อยา: {item_name}&#10;ค่า EGFR: {item_value}&#10;ผู้รับเคส: {claimed_by}&#10;เวลา: {claimed_at}">{{ (edit_row.claim_notify_template or '') if edit_row else '' }}</textarea>
+    </div>
+    <div class="mt-2" id="hint-flex" style="{{ '' if edit_row and edit_row.claim_notify_type == 'flex' else 'display:none' }}">
+      <div class="muted" style="font-size:.8rem;margin-bottom:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;">
+        ใส่ <strong>Flex JSON</strong> ของ <code>contents</code> (bubble หรือ carousel) รองรับ <code>{field}</code> ในทุก text field<br>
+        ตัวอย่าง: <code>{"type":"bubble","body":{"type":"box","layout":"vertical","contents":[{"type":"text","text":"✅ รับเคส {patient_name}","weight":"bold"}]}}</code>
+      </div>
+    </div>
+    <div class="mt-1">
+      <label>Claim Notify Template <span class="muted">(ว่างจะใช้ค่า default)</span></label>
+      <textarea class="textarea" name="claim_notify_template" rows="7"
+        id="claim-notify-textarea"
+        placeholder="✅ รับเคสเรียบร้อย&#10;&#10;ผู้ป่วย: {patient_name}&#10;HN: {patient_hn}&#10;ชื่อยา: {item_name}&#10;ค่า EGFR: {item_value}&#10;ผู้รับเคส: {claimed_by}&#10;เวลา: {claimed_at}">{{ (edit_row.claim_notify_template or '') if edit_row else '' }}</textarea>
+    </div>
+    <script>
+    function toggleNotifyType(val) {
+      document.getElementById('hint-text').style.display = val === 'flex' ? 'none' : '';
+      document.getElementById('hint-flex').style.display = val === 'flex' ? '' : 'none';
+      var ta = document.getElementById('claim-notify-textarea');
+      ta.rows = val === 'flex' ? 12 : 7;
+      ta.placeholder = val === 'flex'
+        ? '{\n  "type": "bubble",\n  "body": {\n    "type": "box",\n    "layout": "vertical",\n    "contents": [\n      {"type": "text", "text": "✅ รับเคส {patient_name}", "weight": "bold", "color": "#15803d"},\n      {"type": "text", "text": "HN: {patient_hn}", "size": "sm"}\n    ]\n  }\n}'
+        : '✅ รับเคสเรียบร้อย\n\nผู้ป่วย: {patient_name}\nHN: {patient_hn}';
+    }
+    toggleNotifyType(document.getElementById('claim_notify_type').value);
+    </script>
     </div>
     <div class="mt-3">
       <label>สถานะ</label>

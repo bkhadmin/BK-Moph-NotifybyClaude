@@ -1838,6 +1838,7 @@ def alert_type_configs_create(
     key_fields:str=Form(''),
     field_map:str=Form(''),
     display_lines:str=Form(''),
+    claim_notify_type:str=Form('text'),
     claim_notify_template:str=Form(''),
     is_active:str=Form('Y'),
     db:Session=Depends(get_db)
@@ -1852,6 +1853,7 @@ def alert_type_configs_create(
             key_fields=key_fields.strip() or None,
             field_map=field_map.strip() or None,
             display_lines=display_lines.strip() or None,
+            claim_notify_type=claim_notify_type,
             claim_notify_template=claim_notify_template.strip() or None,
             is_active=is_active)
         write_log(db, session.get('username'), client_ip(request), 'alert_type_config.create', 'success', type_code)
@@ -1870,6 +1872,7 @@ def alert_type_configs_update(
     key_fields:str=Form(''),
     field_map:str=Form(''),
     display_lines:str=Form(''),
+    claim_notify_type:str=Form('text'),
     claim_notify_template:str=Form(''),
     is_active:str=Form('Y'),
     db:Session=Depends(get_db)
@@ -1887,6 +1890,7 @@ def alert_type_configs_update(
             key_fields=key_fields.strip() or None,
             field_map=field_map.strip() or None,
             display_lines=display_lines.strip() or None,
+            claim_notify_type=claim_notify_type,
             claim_notify_template=claim_notify_template.strip() or None,
             is_active=is_active)
         write_log(db, session.get('username'), client_ip(request), 'alert_type_config.update', 'success', type_code)

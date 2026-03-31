@@ -1,4 +1,5 @@
 import re
+import json
 import asyncio
 from app.services.timezone_utils import format_thai_datetime
 from app.services.send_pipeline import send_with_log
@@ -18,22 +19,14 @@ _DEFAULT_TEMPLATE = (
 )
 
 
-def _render_template(template: str, variables: dict) -> str:
-    return _FIELD_RE.sub(lambda m: str(variables.get(m.group(1), "-")), template)
-
-
-def build_claim_notification_text(case, claim_notify_template: str = "") -> str:
-    import json as _json
-    template = claim_notify_template.strip() if claim_notify_template else _DEFAULT_TEMPLATE
-    # เริ่มจาก raw row ทั้งหมด เพื่อรองรับ custom column เช่น {shortlist}, {qty}, {result}
+def _build_variables(case) -> dict:
     variables: dict = {}
     try:
         src = getattr(case, "source_row_json", None)
         if src:
-            variables.update({k: str(v) if v is not None else "-" for k, v in _json.loads(src).items()})
+            variables.update({k: str(v) if v is not None else "-" for k, v in json.loads(src).items()})
     except Exception:
         pass
-    # standard fields override ค่า raw (ใช้ค่าที่ normalize แล้ว)
     variables.update({
         "patient_name": case.patient_name or "-",
         "patient_hn":   case.patient_hn or "-",
@@ -44,16 +37,35 @@ def build_claim_notification_text(case, claim_notify_template: str = "") -> str:
         "claimed_at":   format_thai_datetime(case.claimed_at),
         "alert_type":   getattr(case, "alert_type", "-") or "-",
     })
-    return _render_template(template, variables)
+    return variables
 
 
-def build_claim_notification_payload(case, claim_notify_template: str = ""):
-    return [{"type": "text", "text": build_claim_notification_text(case, claim_notify_template)}]
+def _render_str(template: str, variables: dict) -> str:
+    return _FIELD_RE.sub(lambda m: str(variables.get(m.group(1), "-")), template)
+
+
+def _render_flex(flex_template: str, variables: dict) -> list:
+    """แทนค่า {field} ใน Flex JSON template แล้วส่งเป็น payload"""
+    rendered = _render_str(flex_template, variables)
+    contents = json.loads(rendered)
+    return [{"type": "flex", "altText": variables.get("patient_name", "รับเคสแล้ว"), "contents": contents}]
+
+
+def build_claim_notification_payload(case, claim_notify_template: str = "", claim_notify_type: str = "text") -> list:
+    variables = _build_variables(case)
+    if claim_notify_type == "flex" and claim_notify_template and claim_notify_template.strip():
+        try:
+            return _render_flex(claim_notify_template.strip(), variables)
+        except Exception:
+            # fallback to text ถ้า flex render ล้มเหลว
+            pass
+    template = claim_notify_template.strip() if claim_notify_template else _DEFAULT_TEMPLATE
+    return [{"type": "text", "text": _render_str(template, variables)}]
 
 
 def notify_case_claimed(db, username, case):
-    # โหลด claim_notify_template จาก AlertTypeConfig ถ้ามี
     claim_notify_template = ""
+    claim_notify_type = "text"
     alert_type = getattr(case, "alert_type", None)
     if alert_type:
         try:
@@ -61,10 +73,11 @@ def notify_case_claimed(db, username, case):
             cfg_row = get_by_code(db, alert_type)
             if cfg_row:
                 claim_notify_template = cfg_row.claim_notify_template or ""
+                claim_notify_type = getattr(cfg_row, "claim_notify_type", "text") or "text"
         except Exception:
             pass
 
-    payload = build_claim_notification_payload(case, claim_notify_template)
+    payload = build_claim_notification_payload(case, claim_notify_template, claim_notify_type)
     notify_room_id = getattr(case, "notify_room_id", None)
     return asyncio.run(
         send_with_log(

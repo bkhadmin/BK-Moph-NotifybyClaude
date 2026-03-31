@@ -82,6 +82,10 @@ def ensure_schema():
         except Exception:
             pass
         try:
+            conn.execute(text("ALTER TABLE alert_type_configs ADD COLUMN claim_notify_type VARCHAR(10) NOT NULL DEFAULT 'text'"))
+        except Exception:
+            pass
+        try:
             conn.execute(text("""CREATE TABLE IF NOT EXISTS app_settings (
                 `key` VARCHAR(100) PRIMARY KEY,
                 `value` TEXT NULL
