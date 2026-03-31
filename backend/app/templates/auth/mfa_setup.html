@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block guest_body %}
+<div class="guest-wrap">
+  <div class="login-card" style="max-width:420px;">
+    <div style="text-align:center;font-size:2rem;margin-bottom:8px;">📱</div>
+    <h1 class="page-title" style="text-align:center;">ตั้งค่า MFA</h1>
+    <p class="muted mt-2" style="text-align:center;font-size:.85rem;">
+      สแกน QR Code ด้วย <strong>Google Authenticator</strong> หรือ <strong>Authenticator app</strong> อื่นๆ<br>
+      แล้วกรอกรหัส 6 หลักเพื่อยืนยัน
+    </p>
+
+    {% if error %}<div class="alert error mt-3">{{ error }}</div>{% endif %}
+
+    <div style="text-align:center;margin:20px 0 12px;">
+      <img src="data:image/png;base64,{{ qr }}" alt="QR Code"
+           style="width:200px;height:200px;border:8px solid #fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.12);">
+    </div>
+
+    <details style="margin-bottom:16px;">
+      <summary class="muted" style="font-size:.78rem;cursor:pointer;text-align:center;">สแกนไม่ได้? กรอก Secret Key ด้วยตนเอง</summary>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-top:8px;text-align:center;">
+        <code style="font-size:.85rem;letter-spacing:.12em;word-break:break-all;color:#1e3a5f;font-weight:700;">{{ secret }}</code>
+      </div>
+    </details>
+
+    <form method="post" action="/login/mfa/setup" class="stack">
+      <input name="code" placeholder="รหัส OTP 6 หลัก" class="input"
+             autocomplete="one-time-code" inputmode="numeric" maxlength="6"
+             style="text-align:center;font-size:1.5rem;letter-spacing:.3em;font-weight:700;"
+             autofocus>
+      <button type="submit" class="btn">ยืนยันและเข้าสู่ระบบ</button>
+    </form>
+
+    <div class="mt-4" style="text-align:center;">
+      <a href="/login" class="muted" style="font-size:.82rem;">← กลับหน้า Login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

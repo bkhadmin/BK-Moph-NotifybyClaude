@@ -13,3 +13,4 @@ class User(Base):
     role_id:Mapped[int|None]=mapped_column(ForeignKey('roles.id'), nullable=True)
     profile_json:Mapped[str|None]=mapped_column(Text, nullable=True)
     is_active:Mapped[str]=mapped_column(String(1), default='Y', nullable=False)
+    totp_secret:Mapped[str|None]=mapped_column(String(64), nullable=True)

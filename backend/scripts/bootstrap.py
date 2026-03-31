@@ -77,6 +77,10 @@ def ensure_schema():
             conn.execute(text("ALTER TABLE provider_profile_histories ADD COLUMN created_at DATETIME NULL"))
         except Exception:
             pass
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) NULL"))
+        except Exception:
+            pass
 
 def seed():
     Base.metadata.create_all(bind=engine)

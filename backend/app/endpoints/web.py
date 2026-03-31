@@ -310,11 +310,130 @@ def login(request:Request, username:str=Form(...), password:str=Form(...), csrf_
         write_log(db, username, ip, 'login.local', 'failed', 'inactive user')
         return render_login(request, 'บัญชีผู้ใช้นี้ถูกปิดการใช้งาน')
     clear_fail(db, ip)
+    # ตรวจสอบว่า user เป็น superadmin หรือไม่ — ถ้าใช่ต้องผ่าน MFA ก่อน
+    superadmin_role = get_by_code(db, 'superadmin')
+    is_superadmin = superadmin_role and user.role_id == superadmin_role.id
+    if is_superadmin:
+        # สร้าง temp session รอ MFA verify (หมดอายุ 5 นาที)
+        import redis as _redis
+        _r = _redis.from_url(settings.redis_url, decode_responses=True)
+        import secrets as _sec, json as _json
+        tmp_sid = _sec.token_urlsafe(32)
+        _r.setex(f'mfa_pending:{tmp_sid}', 300, _json.dumps({'user_id':user.id,'username':user.username,'display_name':user.display_name,'role_id':user.role_id}))
+        write_log(db, user.username, ip, 'login.local', 'mfa_required', None)
+        if not user.totp_secret:
+            resp = RedirectResponse('/login/mfa/setup', status_code=302)
+        else:
+            resp = RedirectResponse('/login/mfa', status_code=302)
+        resp.set_cookie('mfa_pending', tmp_sid, httponly=True, samesite=settings.session_cookie_samesite, path='/', max_age=300)
+        return resp
     sid=create_session({'user_id':user.id,'username':user.username,'display_name':user.display_name,'role_id':user.role_id})
     write_log(db, user.username, ip, 'login.local', 'success', None)
     response=RedirectResponse('/dashboard', status_code=302)
     response.set_cookie(settings.session_cookie_name, sid, httponly=True, samesite=settings.session_cookie_samesite, path='/')
     return response
+
+
+def _get_mfa_pending(request: Request):
+    """ดึง pending user จาก mfa_pending cookie — คืน None ถ้าหมดอายุหรือไม่มี"""
+    import redis as _redis, json as _json
+    tmp_sid = request.cookies.get('mfa_pending')
+    if not tmp_sid:
+        return None, None
+    _r = _redis.from_url(settings.redis_url, decode_responses=True)
+    raw = _r.get(f'mfa_pending:{tmp_sid}')
+    if not raw:
+        return None, None
+    return _json.loads(raw), tmp_sid
+
+
+@router.get('/login/mfa')
+def mfa_verify_page(request: Request, error: str | None = None):
+    pending, _ = _get_mfa_pending(request)
+    if not pending:
+        return RedirectResponse('/login', status_code=302)
+    return templates.TemplateResponse('auth/mfa_verify.html', {'request': request, 'error': error})
+
+
+@router.post('/login/mfa')
+def mfa_verify(request: Request, code: str = Form(...), db: Session = Depends(get_db)):
+    from app.services.totp_service import verify_code as totp_verify
+    pending, tmp_sid = _get_mfa_pending(request)
+    if not pending:
+        return RedirectResponse('/login', status_code=302)
+    user = get_by_id(db, pending['user_id'])
+    if not user or not user.totp_secret or not totp_verify(user.totp_secret, code):
+        write_log(db, pending.get('username',''), client_ip(request), 'login.mfa', 'failed', 'invalid code')
+        return templates.TemplateResponse('auth/mfa_verify.html', {'request': request, 'error': 'รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่'})
+    # MFA pass → สร้าง session จริง ลบ temp session
+    import redis as _redis
+    _redis.from_url(settings.redis_url, decode_responses=True).delete(f'mfa_pending:{tmp_sid}')
+    sid = create_session({'user_id': user.id, 'username': user.username, 'display_name': user.display_name, 'role_id': user.role_id})
+    write_log(db, user.username, client_ip(request), 'login.mfa', 'success', None)
+    response = RedirectResponse('/dashboard', status_code=302)
+    response.set_cookie(settings.session_cookie_name, sid, httponly=True, samesite=settings.session_cookie_samesite, path='/')
+    response.delete_cookie('mfa_pending', path='/')
+    return response
+
+
+@router.get('/login/mfa/setup')
+def mfa_setup_page(request: Request, error: str | None = None, confirmed: bool = False):
+    from app.services.totp_service import generate_secret, get_qr_base64
+    pending, _ = _get_mfa_pending(request)
+    if not pending:
+        return RedirectResponse('/login', status_code=302)
+    # สร้าง secret ใหม่ทุกครั้งที่เปิดหน้า setup (เก็บไว้ใน cookie ชั่วคราว)
+    import redis as _redis, json as _json, secrets as _sec
+    _r = _redis.from_url(settings.redis_url, decode_responses=True)
+    setup_sid = request.cookies.get('mfa_setup')
+    secret = None
+    if setup_sid:
+        raw = _r.get(f'mfa_setup:{setup_sid}')
+        if raw:
+            secret = _json.loads(raw).get('secret')
+    if not secret:
+        secret = generate_secret()
+        setup_sid = _sec.token_urlsafe(16)
+        _r.setex(f'mfa_setup:{setup_sid}', 600, _json.dumps({'secret': secret}))
+    qr = get_qr_base64(secret, pending.get('username', 'admin'))
+    resp = templates.TemplateResponse('auth/mfa_setup.html', {'request': request, 'qr': qr, 'secret': secret, 'error': error})
+    resp.set_cookie('mfa_setup', setup_sid, httponly=True, samesite=settings.session_cookie_samesite, path='/', max_age=600)
+    return resp
+
+
+@router.post('/login/mfa/setup')
+def mfa_setup_confirm(request: Request, code: str = Form(...), db: Session = Depends(get_db)):
+    from app.services.totp_service import verify_code as totp_verify, get_qr_base64
+    pending, tmp_sid = _get_mfa_pending(request)
+    if not pending:
+        return RedirectResponse('/login', status_code=302)
+    import redis as _redis, json as _json
+    _r = _redis.from_url(settings.redis_url, decode_responses=True)
+    setup_sid = request.cookies.get('mfa_setup')
+    secret = None
+    if setup_sid:
+        raw = _r.get(f'mfa_setup:{setup_sid}')
+        if raw:
+            secret = _json.loads(raw).get('secret')
+    if not secret or not totp_verify(secret, code):
+        qr = get_qr_base64(secret, pending.get('username', 'admin')) if secret else ''
+        return templates.TemplateResponse('auth/mfa_setup.html', {'request': request, 'qr': qr, 'secret': secret or '', 'error': 'รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่'})
+    # บันทึก secret ลง DB
+    user = get_by_id(db, pending['user_id'])
+    user.totp_secret = secret
+    db.commit()
+    # ลบ temp sessions, สร้าง session จริง
+    _r.delete(f'mfa_pending:{tmp_sid}')
+    if setup_sid:
+        _r.delete(f'mfa_setup:{setup_sid}')
+    sid = create_session({'user_id': user.id, 'username': user.username, 'display_name': user.display_name, 'role_id': user.role_id})
+    write_log(db, user.username, client_ip(request), 'login.mfa.setup', 'success', 'totp secret saved')
+    response = RedirectResponse('/dashboard', status_code=302)
+    response.set_cookie(settings.session_cookie_name, sid, httponly=True, samesite=settings.session_cookie_samesite, path='/')
+    response.delete_cookie('mfa_pending', path='/')
+    response.delete_cookie('mfa_setup', path='/')
+    return response
+
 
 @router.get('/auth/provider/login')
 def provider_login():

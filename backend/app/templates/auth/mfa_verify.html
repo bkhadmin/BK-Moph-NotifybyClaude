@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block guest_body %}
+<div class="guest-wrap">
+  <div class="login-card">
+    <div style="text-align:center;font-size:2rem;margin-bottom:8px;">🔐</div>
+    <h1 class="page-title" style="text-align:center;">ยืนยันตัวตน (MFA)</h1>
+    <p class="muted mt-2" style="text-align:center;font-size:.88rem;">กรอกรหัส 6 หลักจาก Google Authenticator</p>
+    {% if error %}<div class="alert error mt-4">{{ error }}</div>{% endif %}
+    <form method="post" action="/login/mfa" class="mt-6 stack">
+      <input name="code" placeholder="รหัส OTP 6 หลัก" class="input"
+             autocomplete="one-time-code" inputmode="numeric" maxlength="6"
+             style="text-align:center;font-size:1.5rem;letter-spacing:.3em;font-weight:700;"
+             autofocus>
+      <button type="submit" class="btn">ยืนยัน</button>
+    </form>
+    <div class="mt-4" style="text-align:center;">
+      <a href="/login" class="muted" style="font-size:.82rem;">← กลับหน้า Login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
