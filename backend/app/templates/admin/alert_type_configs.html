@@ -17,7 +17,8 @@
 {% if saved %}<div class="alert" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:14px;padding:14px 16px;" class="mt-4">บันทึกเรียบร้อย</div>{% endif %}
 
 <div class="grid-2 mt-6">
-  {# Create / Edit form #}
+
+  {# ── Create / Edit form ── #}
   <form method="post"
     action="{% if edit_row %}/alert-type-configs/{{ edit_row.id }}/update{% else %}/alert-type-configs{% endif %}"
     class="card">
@@ -27,83 +28,84 @@
       <label>Type Code <span class="muted">(ไม่ซ้ำ ห้ามมีช่องว่าง เช่น lab_critical, drug_critical)</span></label>
       <input class="input" name="type_code" value="{{ edit_row.type_code if edit_row else '' }}" placeholder="เช่น drug_critical" required>
     </div>
+
     <div class="mt-3">
       <label>ชื่อแสดงผล (Display Name)</label>
       <input class="input" name="display_name" value="{{ edit_row.display_name if edit_row else '' }}" placeholder="เช่น ยาวิกฤต" required>
     </div>
+
     <div class="mt-3">
       <label>ข้อความหัวใน Bubble</label>
       <input class="input" name="bubble_title" value="{{ edit_row.bubble_title if edit_row else '' }}" placeholder="เช่น แจ้งเตือนยาวิกฤต">
     </div>
+
     <div class="mt-3">
       <label>สีหัว Bubble (hex)</label>
       <input class="input" name="bubble_title_color" value="{{ edit_row.bubble_title_color if edit_row else '#b91c1c' }}" placeholder="#b91c1c">
     </div>
+
     <div class="mt-3">
       <label>Required Fields <span class="muted">(JSON array — field ที่ต้องมีใน query row)</span></label>
       <textarea class="textarea" name="required_fields" rows="2" placeholder='["hn","drug_name","dose"]'>{{ (edit_row.required_fields or '') if edit_row else '' }}</textarea>
     </div>
+
     <div class="mt-3">
       <label>Key Fields <span class="muted">(JSON array — field ที่ใช้สร้าง dedup key)</span></label>
       <textarea class="textarea" name="key_fields" rows="2" placeholder='["hn","drug_name","dose","order_date"]'>{{ (edit_row.key_fields or '') if edit_row else '' }}</textarea>
     </div>
+
     <div class="mt-3">
       <label>Field Map <span class="muted">(JSON object — standard_name → ชื่อ column ใน query)</span></label>
       <div class="muted" style="font-size:.8rem;margin-bottom:6px;">
         Standard names: <code>patient_hn</code>, <code>patient_name</code>, <code>department</code>,
         <code>item_name</code>, <code>item_value</code>, <code>report_date</code>, <code>report_time</code>, <code>doctor</code>
       </div>
-      <textarea class="textarea" name="field_map" rows="9" placeholder='{"patient_hn":"hn","patient_name":"ptname","department":"cur_dep","item_name":"drug_name","item_value":"dose","report_date":"order_date","report_time":"order_time","doctor":"doctor_name"}'>{{ (edit_row.field_map or '') if edit_row else '' }}</textarea>
+      <textarea class="textarea" name="field_map" rows="9"
+        placeholder='{"patient_hn":"hn","patient_name":"ptname","department":"cur_dep","item_name":"drug_name","item_value":"dose","report_date":"order_date","report_time":"order_time","doctor":"doctor_name"}'>{{ (edit_row.field_map or '') if edit_row else '' }}</textarea>
     </div>
+
     <div class="mt-3">
-      <label>Display Lines <span class="muted">(JSON array — บรรทัดแสดงผลใน bubble แทน item_name = item_value)</span></label>
+      <label>Display Lines <span class="muted">(JSON array — บรรทัดแสดงผลใน bubble)</span></label>
       <div class="muted" style="font-size:.8rem;margin-bottom:6px;">
-        ใช้ <code>{ชื่อ column}</code> ใน text เช่น <code>{"text": "ชื่อยา {drug_name}", "color": "#dc2626"}</code><br>
-        fields: <code>text</code> (required), <code>color</code> (#hex), <code>bold</code> (true/false), <code>size</code> (sm/md/lg)
+        ใช้ <code>{ชื่อ column}</code> เช่น <code>{"text": "ชื่อยา {drug_name}", "color": "#dc2626"}</code> |
+        fields: <code>text</code>, <code>color</code>, <code>bold</code>, <code>size</code> (sm/md/lg), <code>weight</code>
       </div>
       <textarea class="textarea" name="display_lines" rows="5" placeholder='[
   {"text": "ชื่อยา {drug_name}", "color": "#dc2626", "bold": true},
   {"text": "ค่า EGFR = {egfr}", "color": "#dc2626", "bold": true}
 ]'>{{ (edit_row.display_lines or '') if edit_row else '' }}</textarea>
     </div>
+
+    {# ── Claim Notify Type ── #}
     <div class="mt-3">
       <label>ประเภทข้อความตอบกลับ (Claim Notify Type)</label>
-      <select class="input" name="claim_notify_type" id="claim_notify_type" onchange="toggleNotifyType(this.value)">
+      <select class="input" name="claim_notify_type" id="claim_notify_type">
         <option value="text" {% if not edit_row or (edit_row.claim_notify_type or 'text') == 'text' %}selected{% endif %}>💬 Text — ข้อความธรรมดา</option>
         <option value="flex" {% if edit_row and edit_row.claim_notify_type == 'flex' %}selected{% endif %}>🎨 Flex Message — การ์ดสวยงาม</option>
       </select>
     </div>
-    <div class="mt-3" id="hint-text" style="{{ 'display:none' if edit_row and edit_row.claim_notify_type == 'flex' else '' }}">
-      <div class="muted" style="font-size:.8rem;margin-bottom:6px;">
+
+    <div id="hint-text" class="mt-2">
+      <div class="muted" style="font-size:.8rem;">
         ตัวแปร: <code>{patient_name}</code>, <code>{patient_hn}</code>, <code>{item_name}</code>, <code>{item_value}</code>,
         <code>{department}</code>, <code>{claimed_by}</code>, <code>{claimed_at}</code> และทุก column จาก query
       </div>
     </div>
-    <div class="mt-2" id="hint-flex" style="{{ '' if edit_row and edit_row.claim_notify_type == 'flex' else 'display:none' }}">
-      <div class="muted" style="font-size:.8rem;margin-bottom:6px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;">
-        ใส่ <strong>Flex JSON</strong> ของ <code>contents</code> (bubble หรือ carousel) รองรับ <code>{field}</code> ในทุก text field<br>
-        ตัวอย่าง: <code>{"type":"bubble","body":{"type":"box","layout":"vertical","contents":[{"type":"text","text":"✅ รับเคส {patient_name}","weight":"bold"}]}}</code>
+
+    <div id="hint-flex" class="mt-2">
+      <div style="font-size:.8rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;color:#1e40af;">
+        ใส่ <strong>Flex JSON</strong> ของ <code>contents</code> (bubble/carousel) — ใช้ <code>{field}</code> ใน text ได้ทุกที่<br>
+        เช่น <code>{"type":"bubble","body":{"type":"box","layout":"vertical","contents":[...]}}</code>
       </div>
     </div>
-    <div class="mt-1">
+
+    <div class="mt-2">
       <label>Claim Notify Template <span class="muted">(ว่างจะใช้ค่า default)</span></label>
-      <textarea class="textarea" name="claim_notify_template" rows="7"
-        id="claim-notify-textarea"
-        placeholder="✅ รับเคสเรียบร้อย&#10;&#10;ผู้ป่วย: {patient_name}&#10;HN: {patient_hn}&#10;ชื่อยา: {item_name}&#10;ค่า EGFR: {item_value}&#10;ผู้รับเคส: {claimed_by}&#10;เวลา: {claimed_at}">{{ (edit_row.claim_notify_template or '') if edit_row else '' }}</textarea>
+      <textarea class="textarea" name="claim_notify_template" id="claim-notify-textarea" rows="7"
+        placeholder="✅ รับเคสเรียบร้อย&#10;&#10;ผู้ป่วย: {patient_name}&#10;HN: {patient_hn}">{{ (edit_row.claim_notify_template or '') if edit_row else '' }}</textarea>
     </div>
-    <script>
-    function toggleNotifyType(val) {
-      document.getElementById('hint-text').style.display = val === 'flex' ? 'none' : '';
-      document.getElementById('hint-flex').style.display = val === 'flex' ? '' : 'none';
-      var ta = document.getElementById('claim-notify-textarea');
-      ta.rows = val === 'flex' ? 12 : 7;
-      ta.placeholder = val === 'flex'
-        ? '{\n  "type": "bubble",\n  "body": {\n    "type": "box",\n    "layout": "vertical",\n    "contents": [\n      {"type": "text", "text": "✅ รับเคส {patient_name}", "weight": "bold", "color": "#15803d"},\n      {"type": "text", "text": "HN: {patient_hn}", "size": "sm"}\n    ]\n  }\n}'
-        : '✅ รับเคสเรียบร้อย\n\nผู้ป่วย: {patient_name}\nHN: {patient_hn}';
-    }
-    toggleNotifyType(document.getElementById('claim_notify_type').value);
-    </script>
-    </div>
+
+    {# ── Status & Actions ── #}
     <div class="mt-3">
       <label>สถานะ</label>
       <select class="input" name="is_active">
@@ -111,13 +113,14 @@
         <option value="N" {% if edit_row and edit_row.is_active == 'N' %}selected{% endif %}>Inactive</option>
       </select>
     </div>
+
     <div class="page-actions mt-4">
       <button class="btn" type="submit">{% if edit_row %}Update{% else %}Save{% endif %}</button>
       {% if edit_row %}<a href="/alert-type-configs" class="btn secondary">Cancel</a>{% endif %}
     </div>
   </form>
 
-  {# Info card #}
+  {# ── Info card ── #}
   <div class="card">
     <h3>วิธีใช้</h3>
     <div class="mt-3" style="font-size:.9rem;line-height:1.8;">
@@ -126,23 +129,62 @@
       <p><strong>3. สร้าง Schedule</strong> — ผูก Template + Approved Query เข้าด้วยกัน</p>
       <p><strong>4. ระบบทำงาน</strong> — ทุก row ของ query = 1 bubble + 1 ปุ่มรับเคส ถ้ารับแล้วจะไม่ส่งซ้ำ</p>
     </div>
+
     <div class="mt-4">
-      <div style="font-weight:700;margin-bottom:6px;">ตัวอย่าง Field Map (LAB Critical)</div>
+      <div style="font-weight:700;margin-bottom:6px;font-size:.88rem;">ตัวอย่าง Field Map</div>
       <div class="json-box" style="font-size:.8rem;"><pre>{% raw %}{
   "patient_hn": "hn",
   "patient_name": "ptname",
   "department": "cur_dep",
-  "item_name": "lab_items_name",
-  "item_value": "lab_order_result",
-  "report_date": "report_date_text",
-  "report_time": "report_time_text",
-  "doctor": "แพทย์ผู้สั่ง"
+  "item_name": "drug_name",
+  "item_value": "egfr",
+  "doctor": "doctor_name"
 }{% endraw %}</pre></div>
     </div>
+
+    <div class="mt-4" style="border-top:1px solid #f1f5f9;padding-top:14px;">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:10px;">💬 Claim Notify Type</div>
+
+      <div style="margin-bottom:10px;">
+        <span style="background:#f0fdf4;color:#15803d;border-radius:6px;padding:2px 8px;font-size:.78rem;font-weight:700;">TEXT</span>
+        <span style="font-size:.85rem;margin-left:8px;">ข้อความธรรมดา ใช้ตัวแปร <code>{field}</code></span>
+        <div class="json-box" style="font-size:.77rem;margin-top:6px;"><pre>{% raw %}✅ รับเคสเรียบร้อย
+
+👤 ผู้ป่วย: {patient_name}
+🏷 HN: {patient_hn}
+💊 ยา: {item_name}
+⚠️ {result}
+✋ ผู้รับเคส: {claimed_by}
+🕐 เวลา: {claimed_at}{% endraw %}</pre></div>
+      </div>
+
+      <div class="mt-3">
+        <span style="background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-size:.78rem;font-weight:700;">FLEX</span>
+        <span style="font-size:.85rem;margin-left:8px;">Flex JSON bubble/carousel ใช้ <code>{field}</code> ใน text ได้</span>
+        <div class="json-box" style="font-size:.77rem;margin-top:6px;"><pre>{% raw %}{
+  "type": "bubble",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {"type":"text","text":"✅ รับเคส {patient_name}",
+       "weight":"bold","color":"#15803d"},
+      {"type":"text","text":"HN: {patient_hn}","size":"sm"},
+      {"type":"separator","margin":"md"},
+      {"type":"text","text":"💊 {item_name}",
+       "size":"sm","color":"#dc2626"},
+      {"type":"text","text":"✋ {claimed_by}  🕐 {claimed_at}",
+       "size":"xs","color":"#64748b"}
+    ]
+  }
+}{% endraw %}</pre></div>
+      </div>
+    </div>
   </div>
+
 </div>
 
-{# List #}
+{# ── List ── #}
 <div class="card mt-6">
   <h3>Alert Type Configs ทั้งหมด</h3>
   {% for cfg in alert_type_configs %}
@@ -151,6 +193,9 @@
       <div>
         <strong>{{ cfg.display_name }}</strong>
         <span class="badge {% if cfg.is_active == 'Y' %}success{% else %}danger{% endif %}" style="margin-left:8px;font-size:.75rem;">{{ 'Active' if cfg.is_active == 'Y' else 'Inactive' }}</span>
+        <span style="margin-left:6px;font-size:.72rem;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:999px;">
+          {{ '🎨 Flex' if cfg.claim_notify_type == 'flex' else '💬 Text' }}
+        </span>
         <div class="muted" style="font-size:.82rem;margin-top:2px;">type_code: <code>{{ cfg.type_code }}</code></div>
         {% if cfg.bubble_title %}
         <div class="muted" style="font-size:.82rem;">bubble: {{ cfg.bubble_title }}</div>
@@ -185,4 +230,17 @@
   <div class="muted mt-3">ยังไม่มี config — กด "Seed ค่าเริ่มต้น LAB Critical" เพื่อเริ่มต้น</div>
   {% endfor %}
 </div>
+
+<script>
+function toggleNotifyType(val) {
+  document.getElementById('hint-text').style.display = val === 'flex' ? 'none' : '';
+  document.getElementById('hint-flex').style.display = val === 'flex' ? '' : 'none';
+  var ta = document.getElementById('claim-notify-textarea');
+  ta.rows = val === 'flex' ? 14 : 7;
+}
+document.getElementById('claim_notify_type').addEventListener('change', function() {
+  toggleNotifyType(this.value);
+});
+toggleNotifyType(document.getElementById('claim_notify_type').value);
+</script>
 {% endblock %}

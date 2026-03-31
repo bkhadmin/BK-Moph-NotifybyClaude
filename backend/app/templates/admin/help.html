@@ -59,7 +59,7 @@
     <a href="#manual-claim">5. Manual Claim</a>
     <a href="#notify-test">6. ทดสอบส่งข้อความ</a>
     <a href="#alert-type-configs">7. Alert Type Configs</a>
-    <a href="#claim-notify">8. Claim Notify Settings</a>
+    <a href="#claim-notify">8. Claim Notify — ข้อความตอบกลับ</a>
     <a href="#notify-rooms">9. Notify Rooms</a>
     <a href="#schedules">10. Schedules</a>
     <a href="#scheduler-monitor">11. Scheduler Monitor</a>
@@ -365,18 +365,109 @@
 <div class="help-section" id="claim-notify">
   <div class="help-section-title">
     <div class="help-section-icon" style="background:#fdf4ff;">📣</div>
-    <h2>8. Claim Notify Settings</h2>
+    <h2>8. Claim Notify — ข้อความตอบกลับหลังรับเคส</h2>
   </div>
-  <p>ตั้งค่าข้อความที่จะส่งกลับไปยัง LINE <strong>หลังจากมีผู้รับเคสแล้ว</strong></p>
+  <p>เมื่อมีผู้กดปุ่ม <strong>"รับเคส"</strong> ในห้อง LINE ระบบจะส่งข้อความยืนยันกลับไปยังห้องนั้นทันที คุณสามารถกำหนด <strong>รูปแบบ</strong> และ <strong>เนื้อหา</strong> ของข้อความนี้ได้ใน <strong>Alert Type Config</strong> → ส่วน Claim Notify</p>
+
+  <div class="help-note">ตั้งค่าได้ที่ <strong>Alert Type Configs</strong> → เลือก Config ที่ต้องการ → กด Edit → เลื่อนลงไปที่ส่วน <em>"ประเภทข้อความตอบกลับ"</em></div>
+
+  <h3 style="font-size:.92rem;font-weight:800;color:#0f172a;margin:18px 0 10px;">ประเภทข้อความ (Claim Notify Type)</h3>
   <table class="help-table">
-    <thead><tr><th>Field</th><th>ความหมาย</th></tr></thead>
+    <thead><tr><th>ประเภท</th><th>ลักษณะ</th><th>เหมาะสำหรับ</th></tr></thead>
     <tbody>
-      <tr><td>Display Lines</td><td>รายการแถวข้อมูลใน Bubble (JSON array) เช่น <code>[{"text": "{lab_items_name} = {lab_order_result}"}]</code></td></tr>
-      <tr><td>Claim Notify Template</td><td>Template Flex JSON ที่ใช้ส่งกลับ LINE เมื่อรับเคสแล้ว</td></tr>
+      <tr>
+        <td><span class="help-badge green">💬 Text</span></td>
+        <td>ข้อความธรรมดา รองรับตัวแปร <code>{field}</code> และ emoji</td>
+        <td>ข้อความสั้น กระชับ อ่านง่าย</td>
+      </tr>
+      <tr>
+        <td><span class="help-badge blue">🎨 Flex</span></td>
+        <td>LINE Flex Message (JSON bubble/carousel) — การ์ดสวยงาม จัดวาง layout ได้</td>
+        <td>ต้องการ UI ที่สวยงาม แสดงหลาย field อย่างเป็นระเบียบ</td>
+      </tr>
     </tbody>
   </table>
-  <p>ด้านขวาของหน้ามีตัวอย่าง Preview ว่าข้อความที่ส่งกลับจะหน้าตาเป็นอย่างไร</p>
-  <div class="help-note tip">กดปุ่ม <strong>"ดูตัวอย่าง"</strong> เพื่อ preview ข้อความจาก Display Lines ได้ก่อนบันทึก</div>
+
+  <h3 style="font-size:.92rem;font-weight:800;color:#0f172a;margin:18px 0 10px;">ตัวแปรที่ใช้ได้ใน Template</h3>
+  <p style="font-size:.84rem;color:#374151;margin-bottom:8px;">ใช้ <code>{ชื่อตัวแปร}</code> ในข้อความหรือ JSON — ระบบจะแทนค่าอัตโนมัติ</p>
+  <table class="help-table">
+    <thead><tr><th>ตัวแปร</th><th>ข้อมูลที่แทน</th></tr></thead>
+    <tbody>
+      <tr><td><code>{patient_name}</code></td><td>ชื่อ-นามสกุลผู้ป่วย</td></tr>
+      <tr><td><code>{patient_hn}</code></td><td>HN ผู้ป่วย</td></tr>
+      <tr><td><code>{item_name}</code></td><td>ชื่อรายการ (ยา/LAB) จาก field_map → item_name</td></tr>
+      <tr><td><code>{item_value}</code></td><td>ค่า/ผล จาก field_map → item_value</td></tr>
+      <tr><td><code>{department}</code></td><td>แผนกผู้ป่วย</td></tr>
+      <tr><td><code>{claimed_by}</code></td><td>ชื่อผู้รับเคส (username)</td></tr>
+      <tr><td><code>{claimed_at}</code></td><td>เวลาที่รับเคส (เวลาไทย)</td></tr>
+      <tr><td><code>{alert_type}</code></td><td>type_code ของ Alert Type Config</td></tr>
+      <tr><td><code>{ชื่อ column ใดๆ}</code></td><td>ทุก column จาก Query ที่ดึงข้อมูล (source_row_json)</td></tr>
+    </tbody>
+  </table>
+  <div class="help-note tip">ถ้า field_map กำหนดว่า <code>item_name → drug_name</code> คุณยังสามารถใช้ <code>{drug_name}</code> โดยตรงได้ด้วย เพราะระบบโหลดทุก column จาก Query</div>
+
+  <h3 style="font-size:.92rem;font-weight:800;color:#0f172a;margin:18px 0 10px;">💬 รูปแบบ Text — ตัวอย่าง</h3>
+  <p style="font-size:.84rem;color:#374151;margin-bottom:8px;">ใส่ข้อความธรรมดาในช่อง <em>Claim Notify Template</em> (ถ้าเว้นว่างจะใช้ค่า default)</p>
+  <div class="json-box" style="font-size:.8rem;">{% raw %}<pre>✅ รับเคสเรียบร้อย
+
+👤 ผู้ป่วย: {patient_name}
+🏷 HN: {patient_hn}
+💊 ยา: {item_name}  ขนาด: {item_value}
+🏥 แผนก: {department}
+⚠️ ผล EGFR: {egfr}
+✋ ผู้รับเคส: {claimed_by}
+🕐 เวลา: {claimed_at}</pre>{% endraw %}</div>
+  <div class="help-note" style="margin-top:8px;">ค่า <code>{egfr}</code> จะดึงจาก column <code>egfr</code> ใน query โดยตรง แม้ไม่ได้อยู่ใน field_map</div>
+
+  <h3 style="font-size:.92rem;font-weight:800;color:#0f172a;margin:18px 0 10px;">🎨 รูปแบบ Flex — ตัวอย่าง</h3>
+  <p style="font-size:.84rem;color:#374151;margin-bottom:8px;">เลือก <strong>Flex Message</strong> แล้วใส่ JSON ของ <code>contents</code> (bubble หรือ carousel) ในช่อง Template — ใช้ <code>{field}</code> ใน text ได้ทุกที่</p>
+  <div class="json-box" style="font-size:.78rem;">{% raw %}<pre>{
+  "type": "bubble",
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "text",
+        "text": "✅ รับเคสเรียบร้อย",
+        "weight": "bold",
+        "color": "#15803d",
+        "size": "md"
+      },
+      { "type": "separator", "margin": "md" },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "sm",
+        "contents": [
+          {"type":"text","text":"👤 {patient_name}","size":"sm"},
+          {"type":"text","text":"🏷 HN: {patient_hn}","size":"sm"},
+          {"type":"text","text":"💊 {item_name}  ค่า: {item_value}","size":"sm","color":"#dc2626","weight":"bold"},
+          {"type":"text","text":"🏥 {department}","size":"sm"},
+          {"type":"separator","margin":"sm"},
+          {"type":"text","text":"✋ {claimed_by}  🕐 {claimed_at}","size":"xs","color":"#64748b"}
+        ]
+      }
+    ]
+  }
+}</pre>{% endraw %}</div>
+
+  <div class="help-note warn" style="margin-top:10px;">
+    <strong>ข้อควรระวัง Flex:</strong>
+    <ul style="margin:6px 0 0 16px;padding:0;font-size:.82rem;line-height:1.7;">
+      <li>ต้องเป็น JSON ที่ถูกต้อง — ผิดพลาดระบบจะ <strong>fallback เป็น Text</strong> แทน</li>
+      <li>ใส่เฉพาะ <code>contents</code> (bubble/carousel object) — ไม่ต้องใส่ <code>type: "flex"</code> ชั้นนอก</li>
+      <li>ทดสอบ Flex JSON ได้ที่ <a href="https://developers.line.biz/flex-simulator/" target="_blank" rel="noopener" style="color:#2563eb;">LINE Flex Message Simulator</a></li>
+    </ul>
+  </div>
+
+  <h3 style="font-size:.92rem;font-weight:800;color:#0f172a;margin:18px 0 10px;">ขั้นตอนตั้งค่า</h3>
+  <div class="help-step"><div class="help-step-num">1</div><div class="help-step-body">ไปที่ <strong>Alert Type Configs</strong> → กด <strong>Edit</strong> บน config ที่ต้องการ</div></div>
+  <div class="help-step"><div class="help-step-num">2</div><div class="help-step-body">เลือก <strong>ประเภทข้อความตอบกลับ</strong>: <span class="help-badge green">💬 Text</span> หรือ <span class="help-badge blue">🎨 Flex</span></div></div>
+  <div class="help-step"><div class="help-step-num">3</div><div class="help-step-body">พิมพ์ template ในช่อง <strong>Claim Notify Template</strong> — ถ้าเว้นว่างไว้จะใช้ข้อความ default ของระบบ</div></div>
+  <div class="help-step"><div class="help-step-num">4</div><div class="help-step-body">กด <strong>Update</strong> — ข้อความที่ตั้งค่าจะมีผลทันทีในการรับเคสครั้งถัดไป</div></div>
+  <div class="help-note tip">ไม่ต้อง restart server — การตั้งค่าโหลดใหม่ทุกครั้งที่มีการรับเคส</div>
 </div>
 
 {# 9 ── Notify Rooms ── #}
