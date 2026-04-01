@@ -90,7 +90,8 @@ def _build_messages(db, job):
 def _safe_create_log(db, **kwargs):
     try:
         create_job_log(db, **kwargs)
-    except Exception:
+    except Exception as e:
+        print(f"[scheduler] _safe_create_log ERROR: {e} kwargs={list(kwargs.keys())}")
         db.rollback()
 
 def _detail(job):
