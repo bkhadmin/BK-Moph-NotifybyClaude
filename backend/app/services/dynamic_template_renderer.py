@@ -23,12 +23,14 @@ def build_dynamic_template_payload(template_type:str, content:str, alt_text:str|
             cfg = {}
         title = cfg.get("title") or "จำนวนผู้ป่วยนัดแยกรายคลินิก"
         chunk_size = int(cfg.get("chunk_size") or 8)
-        contents = build_full_table_flex(rows or [], title=title, chunk_size=chunk_size)
+        bubbles = build_full_table_flex(rows or [], title=title, chunk_size=chunk_size, return_list=True)
+        bubbles = bubbles[:5]  # LINE API allows max 5 messages per request
+        base_alt = alt_text or title
         return [{
             "type": "flex",
-            "altText": alt_text or title,
-            "contents": contents,
-        }]
+            "altText": f"{base_alt} ({i+1}/{len(bubbles)})" if len(bubbles) > 1 else base_alt,
+            "contents": bubble,
+        } for i, bubble in enumerate(bubbles)]
     if tt == "flex_dynamic":
         rendered = render_dynamic_flex_content(content, rows or [])
         if rendered is None:
