@@ -215,6 +215,7 @@ def execute_job(db, job):
             except Exception:
                 pass
         db.commit()
+        db.expire_all()
         result["updated_cases"] = updated_cases
 
         _finalize_success(db, job, now, rows, messages, result)
