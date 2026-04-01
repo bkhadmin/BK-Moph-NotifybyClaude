@@ -75,7 +75,7 @@ class Settings(BaseSettings):
 
     @property
     def sqlalchemy_database_uri(self)->str:
-        return f"mysql+pymysql://{self.mysql_user}:{quote_plus(self.mysql_password)}@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}?charset=utf8mb4"
+        return f"mysql+pymysql://{self.mysql_user}:{quote_plus(self.mysql_password)}@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}?charset=utf8mb4&use_unicode=1"
 
     @property
     def hosxp_database_uri(self)->str:
