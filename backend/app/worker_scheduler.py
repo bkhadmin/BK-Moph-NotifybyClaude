@@ -98,6 +98,7 @@ def _detail(job):
     return f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, notify_room_id={getattr(job, 'notify_room_id', None)}"
 
 def _finalize_success(db, job, now, rows, messages, result):
+    print(f"[scheduler] _finalize_success called job_id={job.id}")
     _safe_create_log(
         db,
         schedule_job_id=job.id,
