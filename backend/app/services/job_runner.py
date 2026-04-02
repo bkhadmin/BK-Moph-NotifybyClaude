@@ -55,7 +55,7 @@ async def run_job(db: Session, job):
     if template_type in _CLAIM_TYPES:
         try:
             base_url = os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL") or ""
-            rows = enrich_alert_rows(db, rows, base_url, alert_cfg=alert_cfg)
+            rows = enrich_alert_rows(db, rows, base_url, alert_cfg=alert_cfg, notify_room_id=getattr(job, "notify_room_id", None))
             rows = [normalize_alert_row_identity(r) for r in (rows or [])]
         except Exception:
             pass

@@ -136,7 +136,7 @@ def ensure_case_for_row(db, row: dict, alert_cfg: dict | None = None):
     )
     return case
 
-def enrich_alert_rows(db, rows, base_url: str, alert_cfg: dict | None = None):
+def enrich_alert_rows(db, rows, base_url: str, alert_cfg: dict | None = None, notify_room_id: int | None = None):
     ensure_tables()
     out = []
     base_url = (base_url or "").rstrip("/")
@@ -146,7 +146,7 @@ def enrich_alert_rows(db, rows, base_url: str, alert_cfg: dict | None = None):
         case = ensure_case_for_row(db, item, alert_cfg=cfg)
         if case:
             item["case_key"] = case.case_key
-            item["claim_url"] = build_signed_claim_url(base_url, case.case_key)
+            item["claim_url"] = build_signed_claim_url(base_url, case.case_key, room_id=notify_room_id)
             item["case_status"] = case.status
             item["claimed_by"] = case.claimed_by or ""
             item["claimed_at"] = case.claimed_at.strftime("%Y-%m-%d %H:%M:%S") if case.claimed_at else ""

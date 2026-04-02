@@ -1678,7 +1678,7 @@ def alert_case_delete(case_id:int, request:Request, db:Session=Depends(get_db)):
     return RedirectResponse('/alerts/cases', status_code=302)
 
 @router.get('/alerts/claim')
-def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', db:Session=Depends(get_db)):
+def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', room_id:int|None=None, db:Session=Depends(get_db)):
     if not verify_claim_signature(case_key, expires, sig):
         return templates.TemplateResponse('public/claim_case.html', {
             'request': request,
@@ -1693,13 +1693,14 @@ def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', 
     return templates.TemplateResponse('public/claim_case.html', {
         'request': request,
         'case': case,
+        'room_id': room_id,
         'error': None,
         'success': False,
         'redirect_line': False,
     })
 
 @router.post('/alerts/claim')
-def alert_claim_submit(request:Request, case_key:str=Form(...), expires:str=Form(''), sig:str=Form(''), receiver_name:str=Form(''), db:Session=Depends(get_db)):
+def alert_claim_submit(request:Request, case_key:str=Form(...), expires:str=Form(''), sig:str=Form(''), receiver_name:str=Form(''), room_id:int|None=Form(None), db:Session=Depends(get_db)):
     if not verify_claim_signature(case_key, expires, sig):
         return templates.TemplateResponse('public/claim_case.html', {
             'request': request,
@@ -1733,7 +1734,7 @@ def alert_claim_submit(request:Request, case_key:str=Form(...), expires:str=Form
     refreshed_case = get_alert_case_by_key(db, case_key) or case
     claim_notify_error = None
     try:
-        notify_case_claimed(db, receiver, refreshed_case)
+        notify_case_claimed(db, receiver, refreshed_case, notify_room_id=room_id)
         if hasattr(refreshed_case, 'claim_notify_status'):
             refreshed_case.claim_notify_status = 'success'
             refreshed_case.claim_notify_sent_at = bangkok_now_naive()

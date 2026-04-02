@@ -10,11 +10,14 @@ def sign_claim(case_key: str, expires_at: int) -> str:
     payload = f"{case_key}:{expires_at}".encode("utf-8")
     return hmac.new(_secret().encode("utf-8"), payload, hashlib.sha256).hexdigest()
 
-def build_signed_claim_url(base_url: str, case_key: str, ttl_seconds: int = 86400) -> str:
+def build_signed_claim_url(base_url: str, case_key: str, ttl_seconds: int = 86400, room_id: int | None = None) -> str:
     expires_at = int(time.time()) + int(ttl_seconds)
     sig = sign_claim(case_key, expires_at)
     base = (base_url or "").rstrip("/")
-    return f"{base}/alerts/claim?case_key={case_key}&expires={expires_at}&sig={sig}"
+    url = f"{base}/alerts/claim?case_key={case_key}&expires={expires_at}&sig={sig}"
+    if room_id:
+        url += f"&room_id={room_id}"
+    return url
 
 def verify_claim_signature(case_key: str, expires: str | int | None, sig: str | None) -> bool:
     if not case_key or not expires or not sig:

@@ -167,6 +167,7 @@
     <input type="hidden" name="case_key" value="{{ case.case_key }}">
     <input type="hidden" name="expires" value="{{ request.query_params.get('expires', '') }}">
     <input type="hidden" name="sig" value="{{ request.query_params.get('sig', '') }}">
+    {% if room_id %}<input type="hidden" name="room_id" value="{{ room_id }}">{% endif %}
     <div class="form-group">
       <label class="form-label">ชื่อผู้รับเคส</label>
       <input class="form-input" name="receiver_name" placeholder="กรอกชื่อ-นามสกุล" autocomplete="name">

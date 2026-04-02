@@ -63,7 +63,7 @@ def build_claim_notification_payload(case, claim_notify_template: str = "", clai
     return [{"type": "text", "text": _render_str(template, variables)}]
 
 
-def notify_case_claimed(db, username, case):
+def notify_case_claimed(db, username, case, notify_room_id: int | None = None):
     claim_notify_template = ""
     claim_notify_type = "text"
     alert_type = getattr(case, "alert_type", None)
@@ -78,13 +78,14 @@ def notify_case_claimed(db, username, case):
             pass
 
     payload = build_claim_notification_payload(case, claim_notify_template, claim_notify_type)
-    notify_room_id = getattr(case, "notify_room_id", None)
+    # ใช้ room_id จาก claim URL ก่อน (ห้องที่กด claim) ถ้าไม่มีค่อย fallback เป็น case.notify_room_id
+    room_id = notify_room_id or getattr(case, "notify_room_id", None)
     return asyncio.run(
         send_with_log(
             db,
             username or "system",
             payload,
             f"claim_case case_key={case.case_key} claimed_by={case.claimed_by or '-'}",
-            notify_room_id=notify_room_id,
+            notify_room_id=room_id,
         )
     )

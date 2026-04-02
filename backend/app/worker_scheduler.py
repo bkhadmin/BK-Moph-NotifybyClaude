@@ -58,7 +58,7 @@ def _build_messages(db, job):
     # enrich alert rows with case_key / claim_url / claim status, then skip already-claimed cases
     try:
         base_url = os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL") or "http://192.168.191.12:8012"
-        enriched_rows = enrich_alert_rows(db, rows, base_url, alert_cfg=alert_cfg)
+        enriched_rows = enrich_alert_rows(db, rows, base_url, alert_cfg=alert_cfg, notify_room_id=getattr(job, "notify_room_id", None))
         enriched_rows = [normalize_alert_row_identity(x) for x in (enriched_rows or [])]
     except Exception:
         enriched_rows = rows
