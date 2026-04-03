@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     provider_profile_moph_idp_permission:int=1
     provider_profile_position_type:int=1
 
+    line_login_channel_id:str=''
+    line_login_channel_secret:str=''
+    line_login_redirect_uri:str='http://192.168.191.12:8012/line/callback'
+    line_login_cookie_name:str='bk_line_uid'
+    line_login_cookie_days:int=90
+
     moph_notify_base_url:str='https://morpromt2f.moph.go.th'
     moph_notify_send_path:str='/api/notify/send'
     moph_notify_client_key:str=''

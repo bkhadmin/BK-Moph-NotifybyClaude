@@ -20,6 +20,14 @@ def _run_migrations():
     migrations = [
         "ALTER TABLE notify_rooms ADD COLUMN channel_type VARCHAR(20) NOT NULL DEFAULT 'moph_notify'",
         "ALTER TABLE notify_rooms MODIFY COLUMN secret_key TEXT NULL",
+        """CREATE TABLE IF NOT EXISTS line_users (
+            id           INT AUTO_INCREMENT PRIMARY KEY,
+            line_uid     VARCHAR(64) NOT NULL UNIQUE,
+            display_name VARCHAR(200),
+            real_name    VARCHAR(200),
+            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
     ]
     with engine.connect() as conn:
         for sql in migrations:

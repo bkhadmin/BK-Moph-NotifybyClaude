@@ -1677,6 +1677,110 @@ def alert_case_delete(case_id:int, request:Request, db:Session=Depends(get_db)):
         db.commit()
     return RedirectResponse('/alerts/cases', status_code=302)
 
+# ── LINE Login ──────────────────────────────────────────────────────────────
+
+def _get_line_uid(request: Request) -> str | None:
+    """ดึง LINE userId จาก cookie (ถ้ามี)"""
+    return request.cookies.get(settings.line_login_cookie_name) or None
+
+def _get_line_real_name(db: Session, line_uid: str | None) -> str | None:
+    """ดึงชื่อจริงที่ผูกไว้กับ LINE userId"""
+    if not line_uid:
+        return None
+    from app.models.line_user import LineUser
+    row = db.query(LineUser).filter(LineUser.line_uid == line_uid).first()
+    return row.real_name if row and row.real_name else None
+
+@router.get('/line/login')
+def line_login_redirect(request: Request, next: str = ''):
+    """Redirect ไป LINE Login"""
+    from app.services.line_login import get_login_url, generate_state
+    import redis as _redis
+    state = generate_state()
+    # เก็บ state + next URL ใน Redis 5 นาที
+    r = _redis.from_url(settings.redis_url, decode_responses=True)
+    r.setex(f'line_state:{state}', 300, next or '/')
+    url = get_login_url(redirect_uri=settings.line_login_redirect_uri, state=state)
+    return RedirectResponse(url)
+
+@router.get('/line/callback')
+async def line_callback(request: Request, code: str = '', state: str = '', error: str = '', db: Session = Depends(get_db)):
+    """รับ callback จาก LINE Login — แลก code → token → profile → บันทึก DB → set cookie"""
+    import redis as _redis
+    from app.services.line_login import exchange_code_for_token, get_profile
+    from app.models.line_user import LineUser
+
+    if error or not code:
+        return RedirectResponse('/?line_error=cancelled')
+
+    # ตรวจ state
+    r = _redis.from_url(settings.redis_url, decode_responses=True)
+    next_url = r.get(f'line_state:{state}')
+    if next_url is None:
+        return RedirectResponse('/?line_error=state_mismatch')
+    r.delete(f'line_state:{state}')
+
+    try:
+        token_data = await exchange_code_for_token(code, settings.line_login_redirect_uri)
+        profile    = await get_profile(token_data['access_token'])
+    except Exception:
+        return RedirectResponse('/?line_error=token_failed')
+
+    line_uid     = profile.get('userId', '')
+    display_name = profile.get('displayName', '')
+
+    # Upsert ใน line_users
+    row = db.query(LineUser).filter(LineUser.line_uid == line_uid).first()
+    if row:
+        row.display_name = display_name
+    else:
+        row = LineUser(line_uid=line_uid, display_name=display_name)
+        db.add(row)
+    db.commit()
+
+    # Set cookie อายุ 90 วัน
+    redirect_to = next_url if next_url and next_url.startswith('/') else '/'
+    response = RedirectResponse(redirect_to, status_code=302)
+    response.set_cookie(
+        settings.line_login_cookie_name,
+        line_uid,
+        max_age=settings.line_login_cookie_days * 86400,
+        httponly=True,
+        samesite='lax',
+        path='/',
+    )
+    return response
+
+@router.get('/line/set-name')
+def line_set_name_page(request: Request, next: str = '', db: Session = Depends(get_db)):
+    """หน้ากรอกชื่อจริงครั้งแรก (หลัง LINE Login)"""
+    line_uid = _get_line_uid(request)
+    if not line_uid:
+        return RedirectResponse(f'/line/login?next={next}')
+    from app.models.line_user import LineUser
+    row = db.query(LineUser).filter(LineUser.line_uid == line_uid).first()
+    return templates.TemplateResponse('public/line_set_name.html', {
+        'request': request,
+        'display_name': row.display_name if row else '',
+        'real_name': row.real_name if row else '',
+        'next': next,
+    })
+
+@router.post('/line/set-name')
+def line_set_name_submit(request: Request, real_name: str = Form(''), next: str = Form('/'), db: Session = Depends(get_db)):
+    """บันทึกชื่อจริงที่ผูกกับ LINE userId"""
+    from app.models.line_user import LineUser
+    line_uid = _get_line_uid(request)
+    if not line_uid or not real_name.strip():
+        return RedirectResponse(next or '/', status_code=302)
+    row = db.query(LineUser).filter(LineUser.line_uid == line_uid).first()
+    if row:
+        row.real_name = real_name.strip()
+        db.commit()
+    return RedirectResponse(next or '/', status_code=302)
+
+# ── Alert Claim ──────────────────────────────────────────────────────────────
+
 @router.get('/alerts/claim')
 def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', room_id:int|None=None, db:Session=Depends(get_db)):
     if not verify_claim_signature(case_key, expires, sig):
@@ -1690,6 +1794,8 @@ def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', 
     case = get_alert_case_by_key(db, case_key)
     if not case:
         raise HTTPException(status_code=404, detail='case not found')
+    line_uid       = _get_line_uid(request)
+    line_real_name = _get_line_real_name(db, line_uid)
     return templates.TemplateResponse('public/claim_case.html', {
         'request': request,
         'case': case,
@@ -1697,6 +1803,9 @@ def alert_claim_page(request:Request, case_key:str, expires:str='', sig:str='', 
         'error': None,
         'success': False,
         'redirect_line': False,
+        'line_real_name': line_real_name,
+        'line_uid': line_uid,
+        'claim_url_current': str(request.url),
     })
 
 @router.post('/alerts/claim')

@@ -163,17 +163,57 @@
       <span class="info-value"><span class="badge badge-new">รอรับเคส</span></span>
     </div>
   </div>
+  {% if line_real_name %}
+  {# มีชื่อจริงจาก LINE Login แล้ว — แสดง pre-filled #}
+  <div class="alert alert-success" style="margin-bottom:14px;">
+    👤 ยืนยันตัวตนด้วย LINE: <strong>{{ line_real_name }}</strong>
+    <a href="/line/set-name?next={{ claim_url_current | urlencode }}"
+       style="font-size:.78rem;color:#15803d;margin-left:8px;">เปลี่ยนชื่อ</a>
+  </div>
+  <form method="post" action="/alerts/claim">
+    <input type="hidden" name="case_key" value="{{ case.case_key }}">
+    <input type="hidden" name="expires" value="{{ request.query_params.get('expires', '') }}">
+    <input type="hidden" name="sig" value="{{ request.query_params.get('sig', '') }}">
+    {% if room_id %}<input type="hidden" name="room_id" value="{{ room_id }}">{% endif %}
+    <input type="hidden" name="receiver_name" value="{{ line_real_name }}">
+    <button class="btn btn-primary" type="submit">✅ ยืนยันรับเคส</button>
+  </form>
+
+  {% elif line_uid %}
+  {# Login LINE แล้วแต่ยังไม่มีชื่อจริง — ให้กรอก #}
+  <div class="alert alert-error" style="margin-bottom:14px;">
+    ⚠️ กรุณาระบุชื่อ-นามสกุลจริงของคุณก่อน
+  </div>
+  <form method="post" action="/line/set-name">
+    <input type="hidden" name="next" value="{{ claim_url_current }}">
+    <div class="form-group">
+      <label class="form-label">ชื่อ-นามสกุล (จริง)</label>
+      <input class="form-input" name="real_name" placeholder="กรอกชื่อ-นามสกุล" autocomplete="name" required>
+    </div>
+    <button class="btn btn-primary" type="submit">บันทึกชื่อและรับเคส</button>
+  </form>
+
+  {% else %}
+  {# ยังไม่ได้ Login LINE — ให้ login หรือพิมพ์ชื่อเอง #}
+  <a href="/line/login?next={{ claim_url_current | urlencode }}"
+     class="btn" style="background:#06c755;color:#fff;margin-bottom:12px;display:block;text-align:center;padding:13px;border-radius:12px;font-weight:700;font-size:.95rem;text-decoration:none;">
+    <img src="https://developers.line.biz/media/line-developers/login-button/logo.svg"
+         style="height:18px;vertical-align:middle;margin-right:6px;" alt="LINE">
+    Login with LINE (จำชื่ออัตโนมัติ)
+  </a>
   <form method="post" action="/alerts/claim">
     <input type="hidden" name="case_key" value="{{ case.case_key }}">
     <input type="hidden" name="expires" value="{{ request.query_params.get('expires', '') }}">
     <input type="hidden" name="sig" value="{{ request.query_params.get('sig', '') }}">
     {% if room_id %}<input type="hidden" name="room_id" value="{{ room_id }}">{% endif %}
     <div class="form-group">
-      <label class="form-label">ชื่อผู้รับเคส</label>
+      <label class="form-label">หรือพิมพ์ชื่อผู้รับเคส</label>
       <input class="form-input" name="receiver_name" placeholder="กรอกชื่อ-นามสกุล" autocomplete="name">
     </div>
     <button class="btn btn-primary" type="submit">✅ ยืนยันรับเคส</button>
   </form>
+  {% endif %}
+
   <button class="btn btn-secondary" onclick="tryClose(this)">ปิดหน้าต่างนี้</button>
   {% endif %}
 
