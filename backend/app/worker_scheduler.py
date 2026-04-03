@@ -20,7 +20,7 @@ from app.services.send_pipeline import send_with_log
 from app.services.alert_case_service import enrich_alert_rows, mark_alert_case_sent, normalize_alert_row_identity
 from app.services.flex_payload_sanitizer import sanitize_messages
 
-POLL_SECONDS = 30
+POLL_SECONDS = 5
 
 def ensure_tables():
     Base.metadata.create_all(bind=engine)
