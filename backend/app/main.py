@@ -14,6 +14,26 @@ from app.core.middleware import AccessLogMiddleware, CSRFMiddleware, SecurityHea
 app = FastAPI(title=settings.app_name, debug=settings.app_debug)
 settings.upload_path.mkdir(parents=True, exist_ok=True)
 
+# ── Auto migration: เพิ่ม column ใหม่ที่ยังไม่มีใน DB ────────────────────
+def _run_migrations():
+    from app.db.session import engine
+    migrations = [
+        "ALTER TABLE notify_rooms ADD COLUMN channel_type VARCHAR(20) NOT NULL DEFAULT 'moph_notify'",
+        "ALTER TABLE notify_rooms MODIFY COLUMN secret_key TEXT NULL",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(__import__('sqlalchemy').text(sql))
+                conn.commit()
+            except Exception:
+                conn.rollback()  # column มีอยู่แล้ว หรือ error อื่น — ข้ามไป
+
+try:
+    _run_migrations()
+except Exception:
+    pass
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins_list,

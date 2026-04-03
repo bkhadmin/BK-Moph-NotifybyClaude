@@ -2,53 +2,102 @@
 {% block body %}
 <div class="page-header">
   <div>
-    <h1 class="page-title">MOPH Notify Rooms</h1>
-    <div class="muted">จัดการชื่อห้องและเก็บ client key / secret key แยกตามห้องในฐานข้อมูล</div>
+    <h1 class="page-title">Notify Rooms</h1>
+    <div class="muted">จัดการห้องแจ้งเตือน — รองรับ MOPH Notify และ Telegram</div>
   </div>
   <div class="page-actions">
     <a class="btn secondary" href="/settings/claim-notify">Claim Notify Settings</a>
-    <a class="btn secondary" href="/notify/test">Open MOPH Notify</a>
+    <a class="btn secondary" href="/notify/test">Open Notify Test</a>
   </div>
 </div>
 
 <div class="grid-2 mt-6">
   <form class="card" method="post" action="{% if edit_room %}/notify/rooms/{{ edit_room.id }}/update{% else %}/notify/rooms/create{% endif %}">
     <h3>{% if edit_room %}Edit Room{% else %}Create Room{% endif %}</h3>
+
     <div class="grid-2 mt-3">
       <div><label>Room Name</label><input class="input" name="name" value="{{ edit_room.name if edit_room else '' }}" required></div>
       <div><label>Room Code</label><input class="input" name="room_code" value="{{ edit_room.room_code if edit_room else '' }}"></div>
     </div>
-    <div class="mt-3"><label>Client Key</label><textarea class="input" name="client_key" rows="3" required>{{ edit_room.client_key if edit_room else '' }}</textarea></div>
-    <div class="mt-3"><label>Secret Key</label><textarea class="input" name="secret_key" rows="3" required>{{ edit_room.secret_key if edit_room else '' }}</textarea></div>
+
+    <div class="mt-3">
+      <label>Channel Type</label>
+      <select class="input" name="channel_type" id="channel_type_select" onchange="toggleChannelHelp(this.value)">
+        <option value="moph_notify" {% if not edit_room or (edit_room.channel_type or 'moph_notify') == 'moph_notify' %}selected{% endif %}>MOPH Notify (LINE)</option>
+        <option value="telegram" {% if edit_room and edit_room.channel_type == 'telegram' %}selected{% endif %}>Telegram Bot</option>
+      </select>
+    </div>
+
+    <div id="help_moph_notify" class="mt-2" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#1e40af;">
+      <strong>MOPH Notify:</strong> Client Key และ Secret Key จากระบบ MOPH Notify
+    </div>
+    <div id="help_telegram" class="mt-2" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#166534;display:none;">
+      <strong>Telegram:</strong> Client Key = <strong>Bot Token</strong> (เช่น <code>123456:ABCdef...</code>) &nbsp;|&nbsp; Secret Key = <strong>Chat ID</strong> (เช่น <code>-1001234567890</code>)
+      <div class="mt-1">วิธีหา Chat ID: เพิ่ม bot เข้า group แล้วส่งข้อความ จากนั้นเปิด <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code></div>
+    </div>
+
+    <div class="mt-3">
+      <label id="label_client_key">Client Key</label>
+      <textarea class="input" name="client_key" rows="3" required>{{ edit_room.client_key if edit_room else '' }}</textarea>
+    </div>
+    <div class="mt-3">
+      <label id="label_secret_key">Secret Key</label>
+      <textarea class="input" name="secret_key" rows="2">{{ edit_room.secret_key if edit_room else '' }}</textarea>
+    </div>
+
     <div class="grid-2 mt-3">
       <div><label>Status</label><select class="input" name="is_active"><option value="Y" {% if not edit_room or edit_room.is_active == 'Y' %}selected{% endif %}>Active</option><option value="N" {% if edit_room and edit_room.is_active == 'N' %}selected{% endif %}>Inactive</option></select></div>
       <div><label>Note</label><input class="input" name="note" value="{{ edit_room.note if edit_room else '' }}"></div>
     </div>
-    <div class="page-actions mt-4"><button class="btn" type="submit">{% if edit_room %}Update Room{% else %}Create Room{% endif %}</button>{% if edit_room %}<a class="btn secondary" href="/notify/rooms">Cancel</a>{% endif %}</div>
+    <div class="page-actions mt-4">
+      <button class="btn" type="submit">{% if edit_room %}Update Room{% else %}Create Room{% endif %}</button>
+      {% if edit_room %}<a class="btn secondary" href="/notify/rooms">Cancel</a>{% endif %}
+    </div>
   </form>
 
   <div class="card">
     <h3>วิธีใช้งาน</h3>
-    <div class="item"><strong>Base URL และ Send Path</strong><div class="muted">ยังคงอ่านจาก .env ตามเดิม</div></div>
-    <div class="item"><strong>Client Key / Secret Key</strong><div class="muted">จะอ่านจากห้องที่เลือกตอนส่งข้อความ</div></div>
-    <div class="item"><strong>Default fallback</strong><div class="muted">ถ้าไม่เลือกห้อง ระบบจะ fallback ไปใช้ค่าจาก .env</div></div>
+    <div class="item"><strong>MOPH Notify (LINE)</strong><div class="muted">Client Key / Secret Key อ่านจากห้องที่เลือก ถ้าไม่เลือกห้อง fallback ไปใช้ค่าจาก .env</div></div>
+    <div class="item mt-3"><strong>Telegram Bot</strong><div class="muted">Client Key = Bot Token, Secret Key = Chat ID ของ group/channel สร้าง Bot ได้ที่ @BotFather</div></div>
+    <div class="item mt-3"><strong>ข้อความ Telegram</strong><div class="muted">ระบบแปลง Flex message เป็น plain text อัตโนมัติ โดยใช้ altText หรือ flatten เนื้อหา</div></div>
   </div>
 </div>
 
 <div class="card mt-6">
   <table class="table">
-    <thead><tr><th>Name</th><th>Code</th><th>Status</th><th>Note</th><th>Action</th></tr></thead>
+    <thead><tr><th>Name</th><th>Code</th><th>Channel</th><th>Status</th><th>Note</th><th>Action</th></tr></thead>
     <tbody>
       {% for room in notify_rooms %}
       <tr>
         <td>{{ room.name }}</td>
         <td>{{ room.room_code or '-' }}</td>
+        <td>
+          {% if (room.channel_type or 'moph_notify') == 'telegram' %}
+            <span class="badge" style="background:#e0f2fe;color:#0369a1;">📱 Telegram</span>
+          {% else %}
+            <span class="badge" style="background:#eff6ff;color:#1d4ed8;">💬 LINE</span>
+          {% endif %}
+        </td>
         <td><span class="badge {% if room.is_active == 'Y' %}success{% else %}danger{% endif %}">{{ room.is_active }}</span></td>
         <td>{{ room.note or '-' }}</td>
-        <td><div class="page-actions"><a class="btn secondary" href="/notify/rooms?edit_id={{ room.id }}">Edit</a><a class="btn danger" href="/notify/rooms/{{ room.id }}/delete" onclick="return confirm('Delete this room?')">Delete</a></div></td>
+        <td><div class="page-actions">
+          <a class="btn secondary" href="/notify/rooms?edit_id={{ room.id }}">Edit</a>
+          <a class="btn danger" href="/notify/rooms/{{ room.id }}/delete" onclick="return confirm('Delete this room?')">Delete</a>
+        </div></td>
       </tr>
-      {% else %}<tr><td colspan="5" class="muted">No rooms</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="6" class="muted">No rooms</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
+
+<script>
+function toggleChannelHelp(val) {
+  document.getElementById('help_moph_notify').style.display = val === 'moph_notify' ? '' : 'none';
+  document.getElementById('help_telegram').style.display = val === 'telegram' ? '' : 'none';
+  document.getElementById('label_client_key').textContent = val === 'telegram' ? 'Bot Token' : 'Client Key';
+  document.getElementById('label_secret_key').textContent = val === 'telegram' ? 'Chat ID' : 'Secret Key';
+}
+// init on load
+toggleChannelHelp(document.getElementById('channel_type_select').value);
+</script>
 {% endblock %}

@@ -965,20 +965,20 @@ def notify_rooms_page(request:Request, edit_id:int|None=None, db:Session=Depends
     ))
 
 @router.post('/notify/rooms/create')
-def notify_rooms_create(request:Request, name:str=Form(...), room_code:str=Form(''), client_key:str=Form(...), secret_key:str=Form(...), is_active:str=Form('Y'), note:str=Form(''), db:Session=Depends(get_db)):
+def notify_rooms_create(request:Request, name:str=Form(...), room_code:str=Form(''), channel_type:str=Form('moph_notify'), client_key:str=Form(...), secret_key:str=Form(''), is_active:str=Form('Y'), note:str=Form(''), db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify_rooms')
-    create_notify_room(db, name=name, room_code=room_code, client_key=client_key, secret_key=secret_key, is_active=is_active, note=note)
+    create_notify_room(db, name=name, room_code=room_code, channel_type=channel_type, client_key=client_key, secret_key=secret_key, is_active=is_active, note=note)
     return RedirectResponse('/notify/rooms', status_code=302)
 
 @router.post('/notify/rooms/{room_id}/update')
-def notify_rooms_update(room_id:int, request:Request, name:str=Form(...), room_code:str=Form(''), client_key:str=Form(...), secret_key:str=Form(...), is_active:str=Form('Y'), note:str=Form(''), db:Session=Depends(get_db)):
+def notify_rooms_update(room_id:int, request:Request, name:str=Form(...), room_code:str=Form(''), channel_type:str=Form('moph_notify'), client_key:str=Form(...), secret_key:str=Form(''), is_active:str=Form('Y'), note:str=Form(''), db:Session=Depends(get_db)):
     session=require_session(request)
     require_menu(db, session, 'notify_rooms')
     row = get_notify_room_by_id(db, room_id)
     if not row:
         raise HTTPException(status_code=404, detail='room not found')
-    update_notify_room(db, row, name=name.strip(), room_code=(room_code or '').strip() or None, client_key=client_key.strip(), secret_key=secret_key.strip(), is_active=is_active or 'Y', note=(note or '').strip() or None)
+    update_notify_room(db, row, name=name.strip(), room_code=(room_code or '').strip() or None, channel_type=channel_type or 'moph_notify', client_key=client_key.strip(), secret_key=(secret_key or '').strip() or None, is_active=is_active or 'Y', note=(note or '').strip() or None)
     return RedirectResponse('/notify/rooms', status_code=302)
 
 @router.get('/notify/rooms/{room_id}/delete')

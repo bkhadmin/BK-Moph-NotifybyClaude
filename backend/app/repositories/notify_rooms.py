@@ -10,8 +10,8 @@ def get_active(db: Session):
 def get_by_id(db: Session, room_id: int):
     return db.query(NotifyRoom).filter(NotifyRoom.id == room_id).first()
 
-def create_item(db: Session, name: str, room_code: str | None, client_key: str, secret_key: str, is_active: str="Y", note: str | None=None):
-    row = NotifyRoom(name=name.strip(), room_code=(room_code or '').strip() or None, client_key=client_key.strip(), secret_key=secret_key.strip(), is_active=is_active or 'Y', note=(note or '').strip() or None)
+def create_item(db: Session, name: str, room_code: str | None, client_key: str, secret_key: str = "", is_active: str="Y", note: str | None=None, channel_type: str="moph_notify"):
+    row = NotifyRoom(name=name.strip(), room_code=(room_code or '').strip() or None, channel_type=channel_type or "moph_notify", client_key=client_key.strip(), secret_key=(secret_key or '').strip() or None, is_active=is_active or 'Y', note=(note or '').strip() or None)
     db.add(row)
     db.commit()
     db.refresh(row)
