@@ -63,8 +63,10 @@
           </span>
         </td>
         <td>
-          {% if c.case_key %}
-          <a class="btn" href="/alerts/claim?case_key={{ c.case_key }}">รับเคส</a>
+          {% if c.case_key and case_claim_urls.get(c.case_key) %}
+          <a class="btn" href="{{ case_claim_urls[c.case_key] }}" target="_blank">รับเคส</a>
+          {% elif c.case_key %}
+          <span class="muted">ไม่มี URL</span>
           {% else %}
           <span class="muted">ไม่มี case key</span>
           {% endif %}

@@ -1985,6 +1985,8 @@ def manual_claim_page(request:Request, db:Session=Depends(get_db),
     session = require_session(request)
     require_menu(db, session, 'notify')
     from app.services.timezone_utils import today_bangkok_str
+    from app.services.claim_security import build_signed_claim_url
+    import os
     today = today_bangkok_str()
     if not date_from: date_from = today
     if not date_to:   date_to   = today
@@ -1995,7 +1997,12 @@ def manual_claim_page(request:Request, db:Session=Depends(get_db),
                  if c.created_at and date_from <= str(c.created_at)[:10] <= date_to]
     except Exception:
         cases = []
+    base_url = (os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL") or "").rstrip("/")
+    case_claim_urls = {}
+    for c in cases:
+        if c.case_key:
+            case_claim_urls[c.case_key] = build_signed_claim_url(base_url, c.case_key)
     return templates.TemplateResponse(
         'admin/manual_claim.html',
-        ctx(request, db, session, alert_cases=cases, date_from=date_from, date_to=date_to)
+        ctx(request, db, session, alert_cases=cases, date_from=date_from, date_to=date_to, case_claim_urls=case_claim_urls)
     )
