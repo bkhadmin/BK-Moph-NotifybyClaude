@@ -10,24 +10,29 @@ TELEGRAM_API = "https://api.telegram.org/bot{token}/sendMessage"
 
 
 def _messages_to_text(messages: list) -> str:
-    """แปลง LINE message payload เป็น plain text สำหรับ Telegram"""
+    """แปลง LINE message payload เป็น plain text + claim URLs สำหรับ Telegram"""
     parts = []
+    claim_urls = []
     for msg in messages:
         msg_type = msg.get("type", "")
         if msg_type == "text":
             parts.append(msg.get("text", ""))
         elif msg_type == "flex":
-            # ดึง altText หรือ flatten เนื้อหา
-            alt = msg.get("altText", "")
-            if alt:
-                parts.append(alt)
-            else:
-                parts.append(_flatten_flex(msg.get("contents", {})))
+            contents = msg.get("contents") or {}
+            parts.append(_flatten_flex(contents))
+            # ดึง claim URL จาก button actions
+            for url in _extract_claim_urls(contents):
+                if url not in claim_urls:
+                    claim_urls.append(url)
         else:
             text = msg.get("text") or msg.get("altText") or ""
             if text:
                 parts.append(text)
-    return "\n\n".join(p for p in parts if p)
+
+    result = "\n\n".join(p for p in parts if p)
+    if claim_urls:
+        result += "\n\n🔔 รับเคส:\n" + "\n".join(claim_urls)
+    return result
 
 
 def _flatten_flex(contents: dict, depth: int = 0) -> str:
@@ -65,6 +70,42 @@ def _iter_contents(node: dict):
         yield node
     for child in (node.get("contents") or []):
         yield from _iter_contents(child)
+
+
+def _extract_claim_urls(contents: dict) -> list:
+    """ดึง URI จาก button action (claim URL) ใน Flex JSON"""
+    urls = []
+    if not isinstance(contents, dict):
+        return urls
+    # carousel → loop bubbles
+    if contents.get("type") == "carousel":
+        for bubble in (contents.get("contents") or []):
+            urls.extend(_extract_claim_urls(bubble))
+        return urls
+    # footer buttons
+    footer = contents.get("footer") or {}
+    for item in _iter_actions(footer):
+        uri = item.get("uri", "")
+        if uri and uri not in urls:
+            urls.append(uri)
+    # body buttons
+    body = contents.get("body") or {}
+    for item in _iter_actions(body):
+        uri = item.get("uri", "")
+        if uri and uri not in urls:
+            urls.append(uri)
+    return urls
+
+
+def _iter_actions(node: dict):
+    """iterate recursively to find action nodes with uri"""
+    if not isinstance(node, dict):
+        return
+    action = node.get("action")
+    if isinstance(action, dict) and action.get("type") == "uri":
+        yield action
+    for child in (node.get("contents") or []):
+        yield from _iter_actions(child)
 
 
 async def send_telegram_messages(messages: list, bot_token: str, chat_id: str, retries: int = 3):
