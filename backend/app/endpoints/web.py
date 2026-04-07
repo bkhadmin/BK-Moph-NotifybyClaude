@@ -1745,13 +1745,14 @@ async def line_callback(request: Request, code: str = '', state: str = '', error
     db.commit()
 
     # Set cookie อายุ 90 วัน
-    redirect_to = next_url if next_url and (next_url.startswith('/') or next_url.startswith('http://') or next_url.startswith('https://')) else '/'
+    redirect_to = next_url if next_url and next_url.startswith('/') else '/'
     response = RedirectResponse(redirect_to, status_code=302)
     response.set_cookie(
         settings.line_login_cookie_name,
         line_uid,
         max_age=settings.line_login_cookie_days * 86400,
         httponly=True,
+        secure=settings.session_cookie_secure,
         samesite='lax',
         path='/',
     )

@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คู่มือการรับเคส — BK-Moph-Notify</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1565C0;
+    --blue-light: #1976D2;
+    --blue-pale: #E3F2FD;
+    --green: #2E7D32;
+    --green-light: #43A047;
+    --green-pale: #E8F5E9;
+    --line-green: #06C755;
+    --line-green-dark: #00B048;
+    --orange: #E65100;
+    --orange-pale: #FFF3E0;
+    --gray: #546E7A;
+    --gray-light: #ECEFF1;
+    --gray-pale: #F5F7FA;
+    --red: #C62828;
+    --white: #FFFFFF;
+    --text: #1A2332;
+    --text-2: #455A64;
+    --border: #CFD8DC;
+  }
+
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: #F0F4F8;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ===== COVER ===== */
+  .cover {
+    background: linear-gradient(145deg, #0D47A1 0%, #1565C0 40%, #1976D2 70%, #1E88E5 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .cover::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; left: -60px;
+    width: 350px; height: 350px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+  }
+  .cover-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 6px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    margin-bottom: 30px;
+  }
+  .cover-icon {
+    font-size: 72px;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+  }
+  .cover-title {
+    color: #fff;
+    font-size: 42px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .cover-subtitle {
+    color: rgba(255,255,255,0.85);
+    font-size: 20px;
+    font-weight: 400;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .cover-desc {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 20px 36px;
+    color: rgba(255,255,255,0.9);
+    font-size: 15px;
+    text-align: center;
+    max-width: 500px;
+    line-height: 1.8;
+  }
+  .cover-footer {
+    position: absolute;
+    bottom: 30px;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+  }
+
+  /* ===== LAYOUT ===== */
+  .page-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px 48px;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--blue-pale);
+  }
+  .section-num {
+    background: var(--blue);
+    color: #fff;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+  .section-subtitle {
+    font-size: 14px;
+    color: var(--gray);
+    margin-top: 2px;
+  }
+
+  /* ===== FLOW OVERVIEW ===== */
+  .flow-overview {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 8px 0;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 130px;
+  }
+  .flow-step-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin-bottom: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  }
+  .flow-step-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    padding-top: 20px;
+    color: var(--border);
+    font-size: 20px;
+  }
+
+  /* ===== PHONE MOCKUP ===== */
+  .phone-frame {
+    width: 280px;
+    min-height: 540px;
+    background: #1A1A2E;
+    border-radius: 40px;
+    padding: 16px 12px;
+    box-shadow:
+      0 0 0 3px #2A2A4A,
+      0 0 0 6px #1A1A2E,
+      0 20px 60px rgba(0,0,0,0.4),
+      inset 0 0 20px rgba(255,255,255,0.02);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone-notch {
+    width: 80px; height: 22px;
+    background: #0A0A1A;
+    border-radius: 0 0 14px 14px;
+    margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+  }
+  .phone-notch-dot { width: 8px; height: 8px; background: #2A2A4A; border-radius: 50%; }
+  .phone-notch-speaker { width: 30px; height: 4px; background: #2A2A4A; border-radius: 2px; }
+  .phone-screen {
+    background: #fff;
+    border-radius: 26px;
+    overflow: hidden;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== STATUS BAR ===== */
+  .status-bar {
+    background: #f8f9fa;
+    padding: 6px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #eee;
+  }
+  .status-icons { display: flex; gap: 4px; align-items: center; }
+  .status-icons span { font-size: 11px; }
+
+  /* LINE App Header */
+  .line-header {
+    background: var(--line-green);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .line-back { color: #fff; font-size: 18px; }
+  .line-room-info { flex: 1; }
+  .line-room-name { color: #fff; font-size: 13px; font-weight: 700; }
+  .line-room-sub { color: rgba(255,255,255,0.8); font-size: 10px; }
+  .line-icons { display: flex; gap: 10px; color: #fff; font-size: 16px; }
+
+  /* LINE Chat Bubble */
+  .chat-area {
+    flex: 1;
+    background: #C9DBBF;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .chat-date {
+    text-align: center;
+    font-size: 10px;
+    color: #5a7a5a;
+    background: rgba(255,255,255,0.5);
+    padding: 2px 10px;
+    border-radius: 10px;
+    align-self: center;
+  }
+  .chat-bot-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .bot-avatar {
+    width: 30px; height: 30px;
+    background: var(--blue);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .bubble-wrap { display: flex; flex-direction: column; gap: 3px; max-width: 85%; }
+  .bubble-sender { font-size: 9px; color: #5a7a5a; margin-bottom: 1px; }
+
+  /* Flex Message Card */
+  .flex-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    width: 210px;
+  }
+  .flex-card-header {
+    background: var(--blue);
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .flex-card-body {
+    padding: 10px 12px;
+  }
+  .flex-card-row {
+    display: flex;
+    gap: 6px;
+    font-size: 10px;
+    margin-bottom: 5px;
+    line-height: 1.5;
+  }
+  .flex-card-label {
+    color: var(--gray);
+    min-width: 54px;
+    flex-shrink: 0;
+  }
+  .flex-card-value { color: var(--text); font-weight: 500; }
+  .flex-card-value.critical { color: var(--red); font-weight: 700; }
+  .flex-separator {
+    height: 1px;
+    background: #eee;
+    margin: 8px 0;
+  }
+  .claim-btn {
+    display: block;
+    background: var(--blue);
+    color: #fff;
+    text-align: center;
+    padding: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 0 0 12px 12px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .claim-btn:hover { background: var(--blue-light); }
+
+  /* ===== BROWSER URL BAR ===== */
+  .browser-bar {
+    background: #f1f3f4;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #ddd;
+  }
+  .browser-url {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    padding: 3px 10px;
+    font-size: 9px;
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .browser-lock { font-size: 10px; color: #555; }
+
+  /* ===== CLAIM PAGE CONTENT ===== */
+  .claim-page {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .claim-page-header {
+    background: var(--blue);
+    padding: 12px 14px;
+    color: #fff;
+  }
+  .claim-page-title { font-size: 13px; font-weight: 700; }
+  .claim-page-sub { font-size: 9px; opacity: 0.8; margin-top: 2px; }
+
+  .claim-page-body {
+    flex: 1;
+    padding: 12px;
+    overflow: hidden;
+    background: #f8f9fa;
+  }
+
+  .info-card-sm {
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--blue);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .info-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 6px;
+  }
+  .info-row-sm {
+    display: flex;
+    gap: 6px;
+    font-size: 9.5px;
+    margin-bottom: 3px;
+  }
+  .info-label-sm { color: var(--gray); min-width: 52px; }
+  .info-value-sm { font-weight: 500; }
+  .info-value-sm.red { color: var(--red); font-weight: 700; }
+
+  .section-label-sm {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-2);
+    margin: 10px 0 6px;
+  }
+
+  /* Input fields small */
+  .input-sm {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 10px;
+    font-family: 'Sarabun', sans-serif;
+    background: #fff;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .input-sm.prefilled {
+    background: #E8F5E9;
+    border-color: #A5D6A7;
+    color: #2E7D32;
+    font-weight: 600;
+  }
+
+  .btn-sm {
+    width: 100%;
+    padding: 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Sarabun', sans-serif;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-line {
+    background: var(--line-green);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-gray { background: #e0e0e0; color: #555; font-size: 10px; font-weight: 500; }
+  .divider-sm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    font-size: 9px;
+    color: var(--gray);
+  }
+  .divider-sm::before, .divider-sm::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #ddd;
+  }
+
+  /* ===== LINE CONSENT PAGE ===== */
+  .line-consent {
+    flex: 1;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+  }
+  .line-consent-logo {
+    width: 64px; height: 64px;
+    background: var(--line-green);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(6,199,85,0.3);
+  }
+  .line-consent-title {
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .line-consent-app {
+    font-size: 12px;
+    color: var(--line-green-dark);
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .line-consent-perms {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 12px 14px;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .line-consent-perm-title {
+    font-size: 11px;
+    color: var(--gray);
+    margin-bottom: 8px;
+  }
+  .line-consent-perm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  .perm-check { color: var(--line-green); font-size: 14px; }
+  .line-agree-btn {
+    width: 100%;
+    background: var(--line-green);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .line-cancel-btn {
+    width: 100%;
+    background: #fff;
+    color: var(--gray);
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+  }
+
+  /* Set name page */
+  .set-name-page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 14px;
+    background: #f8f9fa;
+  }
+  .set-name-icon {
+    font-size: 40px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .set-name-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .set-name-sub {
+    font-size: 11px;
+    color: var(--gray);
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .line-user-badge {
+    background: #E8F5E9;
+    border: 1px solid #A5D6A7;
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 10px;
+  }
+  .line-user-badge-avatar {
+    width: 28px; height: 28px;
+    background: var(--line-green);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .line-user-badge-name { font-weight: 600; color: #2E7D32; }
+  .line-user-badge-id { color: var(--gray); font-size: 9px; }
+
+  /* Success page */
+  .success-page {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 14px;
+    background: #f8f9fa;
+    text-align: center;
+  }
+  .success-icon { font-size: 64px; margin-bottom: 16px; }
+  .success-title { font-size: 15px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+  .success-sub { font-size: 11px; color: var(--gray); line-height: 1.6; margin-bottom: 16px; }
+  .success-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    width: 100%;
+    border-left: 3px solid var(--green);
+    text-align: left;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    font-size: 10px;
+  }
+  .success-card-row { display: flex; gap: 6px; margin-bottom: 4px; }
+  .success-card-label { color: var(--gray); min-width: 52px; }
+  .success-card-value { font-weight: 600; }
+
+  /* Claimed bubble */
+  .claimed-bubble {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    width: 210px;
+  }
+  .claimed-bubble-header {
+    background: var(--green-light);
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .claimed-bubble-body {
+    padding: 10px 12px;
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .claimed-bubble-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  /* ===== STEPS LAYOUT ===== */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .step-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .step-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: stretch;
+  }
+  .step-num {
+    background: var(--blue);
+    color: #fff;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-text h3 { font-size: 16px; font-weight: 700; color: var(--blue); }
+  .step-text p { font-size: 13px; color: var(--gray); margin-top: 2px; line-height: 1.5; }
+
+  .step-desc {
+    background: var(--blue-pale);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-2);
+    align-self: stretch;
+    line-height: 1.7;
+  }
+  .step-desc ul { padding-left: 18px; }
+  .step-desc li { margin-bottom: 4px; }
+
+  /* ===== 3-STATES GRID ===== */
+  .states-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .state-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .state-badge {
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .state-a { background: #FFF9C4; color: #F57F17; border: 1px solid #F9A825; }
+  .state-b { background: #E3F2FD; color: var(--blue); border: 1px solid #90CAF9; }
+  .state-c { background: var(--green-pale); color: var(--green); border: 1px solid #A5D6A7; }
+
+  .state-title { font-size: 14px; font-weight: 700; text-align: center; color: var(--text); }
+  .state-sub { font-size: 12px; color: var(--gray); text-align: center; line-height: 1.5; }
+
+  /* Phone size compact */
+  .phone-frame.compact {
+    width: 210px;
+    min-height: 420px;
+    border-radius: 30px;
+    padding: 12px 8px;
+  }
+  .phone-frame.compact .phone-notch {
+    width: 60px; height: 16px;
+    margin-bottom: 6px;
+  }
+  .phone-frame.compact .phone-screen {
+    min-height: 360px;
+    border-radius: 20px;
+  }
+
+  /* ===== LINE FLOW ===== */
+  .line-flow-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .line-flow-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .line-flow-arrow {
+    display: flex;
+    align-items: center;
+    padding-top: 120px;
+    color: var(--gray);
+    font-size: 20px;
+  }
+
+  /* Small phone */
+  .phone-frame.sm {
+    width: 180px;
+    min-height: 360px;
+    border-radius: 26px;
+    padding: 10px 7px;
+  }
+  .phone-frame.sm .phone-notch {
+    width: 52px; height: 14px;
+    margin-bottom: 5px;
+  }
+  .phone-frame.sm .phone-screen {
+    min-height: 310px;
+    border-radius: 18px;
+  }
+
+  /* ===== CALLOUT ===== */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .callout-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .callout.info { background: var(--blue-pale); border-left: 4px solid var(--blue); }
+  .callout.success { background: var(--green-pale); border-left: 4px solid var(--green); }
+  .callout.warning { background: var(--orange-pale); border-left: 4px solid var(--orange); }
+  .callout strong { font-weight: 700; }
+
+  /* Horizontal step counter */
+  .hstep {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+  .hstep-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue-pale);
+    border-radius: 8px;
+    padding: 6px 14px 6px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue);
+  }
+  .hstep-num {
+    background: var(--blue);
+    color: #fff;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .hstep-arrow { color: var(--border); font-size: 18px; padding: 0 4px; }
+
+  /* Tips box */
+  .tips-box {
+    background: #FFF8E1;
+    border: 1px solid #FFE082;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+  .tips-title { font-size: 14px; font-weight: 700; color: #E65100; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .tips-list { font-size: 13px; color: #5D4037; line-height: 1.8; padding-left: 18px; }
+
+  /* ===== NOTIFICATION SENT BACK ===== */
+  .notify-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .notify-arrow-down {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 8px 0;
+    gap: 2px;
+    color: var(--green);
+    font-size: 22px;
+  }
+
+  /* print */
+  @media print {
+    body { background: #fff; font-size: 11px; }
+    @page { size: A4; margin: 15mm; }
+    .cover { min-height: 257mm; page-break-after: always; }
+    .section { page-break-inside: avoid; box-shadow: none; border: 1px solid #e0e0e0; padding: 24px 32px; margin-bottom: 16px; }
+    .steps-grid { grid-template-columns: 1fr 1fr; }
+    .states-grid { grid-template-columns: 1fr 1fr 1fr; }
+    .phone-frame { box-shadow: none; border: 2px solid #333; }
+    .no-print { display: none; }
+    .page-break-before { page-break-before: always; }
+  }
+
+  /* Navbar print button */
+  .navbar {
+    position: sticky;
+    top: 0;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .navbar-brand { font-size: 16px; font-weight: 700; color: var(--blue); }
+  .navbar-right { display: flex; gap: 10px; }
+  .btn-print {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+  }
+  .btn-print:hover { background: var(--blue-light); }
+  .nav-sticky-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav-sticky-wrapper no-print">
+  <div class="navbar">
+    <span class="navbar-brand">📋 คู่มือการรับเคส — BK-Moph-Notify</span>
+    <div class="navbar-right">
+      <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-badge">BK-Moph-Notify — Claim Case Manual</div>
+  <div class="cover-icon">📲</div>
+  <div class="cover-title">คู่มือการรับเคส</div>
+  <div class="cover-subtitle">สำหรับเจ้าหน้าที่รับแจ้งเตือนผู้ป่วยวิกฤต</div>
+  <div class="cover-desc">
+    อธิบายขั้นตอนการ <strong>"รับเคส"</strong> ผ่านข้อความ LINE<br>
+    พร้อมภาพประกอบทุกขั้นตอน รวมถึงการเข้าสู่ระบบ LINE Login<br>
+    <br>
+    โรงพยาบาลบางระกำ
+  </div>
+  <div class="cover-footer">ฝ่ายเทคโนโลยีสารสนเทศ — เมษายน 2569</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="page-wrapper">
+
+  <!-- ===== SECTION 1: ภาพรวม ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div>
+        <div class="section-title">ภาพรวมระบบรับเคส</div>
+        <div class="section-subtitle">ระบบแจ้งเตือนและรับเคสผู้ป่วยวิกฤตผ่าน LINE</div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div>
+        <strong>ระบบรับเคส (Claim System)</strong> คือกลไกที่ช่วยให้เจ้าหน้าที่ยืนยันว่าได้รับทราบและดำเนินการกับผู้ป่วยวิกฤตรายนั้นแล้ว
+        โดยระบบจะส่งข้อความแจ้งเตือนพร้อมปุ่ม <strong>"รับเคส"</strong> ผ่าน LINE
+        เมื่อกดลิงก์จะเปิดหน้าเว็บให้ยืนยันชื่อผู้รับเคส จากนั้นระบบจะส่งแจ้งกลับห้องว่ารับเคสแล้ว
+      </div>
+    </div>
+
+    <!-- Flow Overview -->
+    <div style="margin: 28px 0 16px; font-size: 15px; font-weight: 700; color: var(--text-2);">ขั้นตอนโดยรวม</div>
+    <div class="flow-overview">
+      <div class="flow-step">
+        <div class="flow-step-icon" style="background:#E3F2FD;">🏥</div>
+        <div class="flow-step-label">ระบบตรวจพบ<br>ผู้ป่วยวิกฤต</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-step-icon" style="background:#E8F5E9;">📨</div>
+        <div class="flow-step-label">ส่งข้อความ<br>ผ่าน LINE</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-step-icon" style="background:#FFF9C4;">👆</div>
+        <div class="flow-step-label">เจ้าหน้าที่<br>กดปุ่ม "รับเคส"</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-step-icon" style="background:#F3E5F5;">🌐</div>
+        <div class="flow-step-label">เปิดหน้าเว็บ<br>ยืนยันชื่อ</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-step-icon" style="background:#E8F5E9;">✅</div>
+        <div class="flow-step-label">ระบบบันทึก<br>รับเคสแล้ว</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-step-icon" style="background:#E3F2FD;">🔔</div>
+        <div class="flow-step-label">แจ้งกลับ<br>ห้อง LINE</div>
+      </div>
+    </div>
+
+    <div class="tips-box" style="margin-top: 24px;">
+      <div class="tips-title">💡 สิ่งที่ควรรู้ก่อนใช้งาน</div>
+      <ul class="tips-list">
+        <li>ลิงก์รับเคสมีอายุ <strong>1 ชั่วโมง</strong> นับจากเวลาที่ส่ง — ถ้าหมดอายุต้องรอรอบถัดไป</li>
+        <li>แต่ละเคสรับได้ครั้งเดียว ถ้ารับแล้วจะแสดงว่า "รับเคสแล้ว"</li>
+        <li>แนะนำให้ใช้ <strong>LINE Login</strong> เพื่อให้ระบบจดจำชื่อสำหรับครั้งถัดไป</li>
+        <li>สามารถกรอกชื่อด้วยตนเองโดยไม่ต้อง Login ก็ได้</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 2: ขั้นตอนที่ 1 - รับการแจ้งเตือน ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div>
+        <div class="section-title">ขั้นตอนที่ 1 — รับการแจ้งเตือนใน LINE</div>
+        <div class="section-subtitle">ระบบส่งข้อความการ์ด Flex พร้อมข้อมูลผู้ป่วยและปุ่มรับเคส</div>
+      </div>
+    </div>
+
+    <div class="steps-grid" style="grid-template-columns: auto 1fr; align-items: start;">
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <!-- Phone 1 -->
+        <div class="phone-frame" style="width:290px; min-height:560px;">
+          <div class="phone-notch">
+            <div class="phone-notch-speaker"></div>
+            <div class="phone-notch-dot"></div>
+          </div>
+          <div class="phone-screen">
+            <!-- Status bar -->
+            <div class="status-bar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <span>▌▌▌▌</span>
+                <span>WiFi</span>
+                <span>🔋</span>
+              </div>
+            </div>
+            <!-- LINE header -->
+            <div class="line-header">
+              <span class="line-back">‹</span>
+              <div class="line-room-info">
+                <div class="line-room-name">🏥 ห้องแจ้งเตือน ICU</div>
+                <div class="line-room-sub">3 คน</div>
+              </div>
+              <div class="line-icons"><span>📞</span><span>⋮</span></div>
+            </div>
+            <!-- Chat -->
+            <div class="chat-area">
+              <div class="chat-date">วันนี้ 09:41</div>
+              <div class="chat-bot-msg">
+                <div class="bot-avatar">🤖</div>
+                <div class="bubble-wrap">
+                  <div class="bubble-sender">BK Alert Bot</div>
+                  <!-- LAB CRITICAL Flex Card -->
+                  <div class="flex-card">
+                    <div class="flex-card-header" style="background:#C62828;">
+                      🔴 LAB วิกฤต — ต้องรับเคส
+                    </div>
+                    <div class="flex-card-body">
+                      <div class="flex-card-row">
+                        <span class="flex-card-label">ชื่อ-สกุล</span>
+                        <span class="flex-card-value">นายสมศักดิ์ ใจดี</span>
+                      </div>
+                      <div class="flex-card-row">
+                        <span class="flex-card-label">HN</span>
+                        <span class="flex-card-value">12345</span>
+                      </div>
+                      <div class="flex-card-row">
+                        <span class="flex-card-label">แผนก</span>
+                        <span class="flex-card-value">อายุรกรรม</span>
+                      </div>
+                      <div class="flex-separator"></div>
+                      <div class="flex-card-row">
+                        <span class="flex-card-label">รายการ</span>
+                        <span class="flex-card-value critical">K+ = 6.8 mmol/L ⚠️</span>
+                      </div>
+                      <div class="flex-card-row">
+                        <span class="flex-card-label">เวลา</span>
+                        <span class="flex-card-value">09:35 น.</span>
+                      </div>
+                    </div>
+                    <div class="claim-btn">📌 รับเคส</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Another card (dimmed) to show multiple -->
+              <div class="chat-bot-msg" style="opacity:0.4">
+                <div class="bot-avatar">🤖</div>
+                <div class="bubble-wrap">
+                  <div class="flex-card">
+                    <div class="flex-card-header" style="background:#1565C0;">🔵 ยา Metformin+EGFR ต่ำ</div>
+                    <div class="flex-card-body" style="height:40px;background:#f5f5f5;"></div>
+                    <div class="claim-btn">📌 รับเคส</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--gray); margin-top:10px; text-align:center;">ข้อความแจ้งเตือนใน LINE Group</div>
+      </div>
+
+      <div>
+        <div class="callout info" style="margin-bottom:16px;">
+          <span class="callout-icon">📩</span>
+          <div>
+            ระบบส่งการ์ด Flex Message มาที่ห้อง LINE ที่กำหนดไว้ โดยแสดงข้อมูลผู้ป่วยพร้อมปุ่ม <strong>"📌 รับเคส"</strong>
+          </div>
+        </div>
+
+        <div style="font-size:15px; font-weight:700; color:var(--text); margin-bottom:12px;">ข้อมูลในการ์ดแจ้งเตือน</div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="background:#FFEBEE; border-radius:10px; padding:12px 16px; border-left:4px solid #C62828;">
+            <div style="font-size:13px; font-weight:700; color:#C62828; margin-bottom:4px;">🔴 LAB วิกฤต (lab_critical)</div>
+            <div style="font-size:13px; color:var(--text-2); line-height:1.7;">
+              ชื่อ-สกุล, HN, แผนก, รายการ LAB ที่ผิดปกติ, ค่าที่ตรวจได้, เวลา
+            </div>
+          </div>
+          <div style="background:#E3F2FD; border-radius:10px; padding:12px 16px; border-left:4px solid #1565C0;">
+            <div style="font-size:13px; font-weight:700; color:#1565C0; margin-bottom:4px;">🔵 ยาวิกฤต EGFR+Metformin</div>
+            <div style="font-size:13px; color:var(--text-2); line-height:1.7;">
+              ชื่อ-สกุล, HN, ค่า EGFR, ยาที่สั่ง, แพทย์ผู้สั่ง, แผนกผู้ป่วย
+            </div>
+          </div>
+          <div style="background:#F3E5F5; border-radius:10px; padding:12px 16px; border-left:4px solid #7B1FA2;">
+            <div style="font-size:13px; font-weight:700; color:#7B1FA2; margin-bottom:4px;">🟣 MDR / เชื้อดื้อยา</div>
+            <div style="font-size:13px; color:var(--text-2); line-height:1.7;">
+              ชื่อ-สกุล, HN, ผลเพาะเชื้อ, แผนก, คำแนะนำดำเนินการ
+            </div>
+          </div>
+        </div>
+
+        <div class="tips-box" style="margin-top:16px;">
+          <div class="tips-title">📌 วิธีกดรับเคส</div>
+          <ul class="tips-list">
+            <li>กดที่ปุ่มสีน้ำเงิน <strong>"📌 รับเคส"</strong> ที่ด้านล่างของการ์ด</li>
+            <li>ระบบจะเปิดหน้าเว็บใน browser มือถือโดยอัตโนมัติ</li>
+            <li>ถ้าลิงก์หมดอายุจะแสดงข้อความแจ้ง (อายุลิงก์ 1 ชั่วโมง)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 3: ขั้นตอนที่ 2 - เปิดหน้ารับเคส ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div>
+        <div class="section-title">ขั้นตอนที่ 2 — หน้ารับเคส (3 สถานการณ์)</div>
+        <div class="section-subtitle">หน้าเว็บแสดงต่างกันขึ้นอยู่กับสถานะ LINE Login ของผู้ใช้</div>
+      </div>
+    </div>
+
+    <div class="callout warning" style="margin-bottom:24px;">
+      <span class="callout-icon">⚠️</span>
+      <div>
+        เมื่อกดลิงก์จะเปิดหน้าเว็บ <strong>alertmoph.bkhospital.go.th/alerts/claim</strong>
+        ระบบจะตรวจสอบว่าเคยล็อกอิน LINE ไว้หรือยัง แล้วแสดงหน้าที่เหมาะสม
+      </div>
+    </div>
+
+    <div class="states-grid">
+
+      <!-- State A: ไม่มี LINE Login -->
+      <div class="state-block">
+        <div class="state-badge state-a">สถานการณ์ที่ 1</div>
+        <div class="state-title">ยังไม่ได้ Login LINE</div>
+        <div class="state-sub">ผู้ใช้เปิดลิงก์ครั้งแรก<br>ยังไม่เคย Login LINE มาก่อน</div>
+
+        <div class="phone-frame compact">
+          <div class="phone-notch">
+            <div class="phone-notch-speaker"></div>
+            <div class="phone-notch-dot"></div>
+          </div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/alerts/claim</span>
+            </div>
+            <div class="claim-page">
+              <div class="claim-page-header">
+                <div class="claim-page-title">📌 รับเคสผู้ป่วยวิกฤต</div>
+                <div class="claim-page-sub">กรุณายืนยันตัวตนเพื่อรับเคส</div>
+              </div>
+              <div class="claim-page-body">
+                <div class="info-card-sm">
+                  <div class="info-card-title">🔴 LAB วิกฤต</div>
+                  <div class="info-row-sm"><span class="info-label-sm">ชื่อ-สกุล</span><span class="info-value-sm">นายสมศักดิ์ ใจดี</span></div>
+                  <div class="info-row-sm"><span class="info-label-sm">HN</span><span class="info-value-sm">12345</span></div>
+                  <div class="info-row-sm"><span class="info-label-sm">K+</span><span class="info-value-sm red">6.8 ⚠️</span></div>
+                </div>
+                <div class="section-label-sm">🔑 เข้าสู่ระบบผ่าน LINE (แนะนำ)</div>
+                <button class="btn-sm btn-line">
+                  <span style="font-size:16px;">💬</span> Login with LINE
+                </button>
+                <div class="divider-sm">หรือกรอกชื่อเอง</div>
+                <input class="input-sm" type="text" placeholder="กรอกชื่อ-นามสกุล เช่น พญ.สมใจ" readonly>
+                <button class="btn-sm btn-blue" style="opacity:0.5; font-size:10px;">✅ ยืนยันรับเคส</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#FFF9C4; border-radius:8px; padding:10px 12px; font-size:12px; color:#5D4037; line-height:1.6; align-self:stretch; border:1px solid #FFE082;">
+          <strong>ตัวเลือก:</strong><br>
+          1. กดปุ่ม Login LINE (แนะนำ)<br>
+          2. กรอกชื่อด้วยตนเอง
+        </div>
+      </div>
+
+      <!-- State B: LINE Login ครั้งแรก (ยังไม่มีชื่อจริง) -->
+      <div class="state-block">
+        <div class="state-badge state-b">สถานการณ์ที่ 2</div>
+        <div class="state-title">Login LINE ครั้งแรก</div>
+        <div class="state-sub">Login LINE สำเร็จแต่<br>ยังไม่ได้กำหนดชื่อจริง</div>
+
+        <div class="phone-frame compact">
+          <div class="phone-notch">
+            <div class="phone-notch-speaker"></div>
+            <div class="phone-notch-dot"></div>
+          </div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:42</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/line/set-name</span>
+            </div>
+            <div class="claim-page">
+              <div class="set-name-page">
+                <div class="set-name-icon">👤</div>
+                <div class="set-name-title">กรุณาระบุชื่อจริง</div>
+                <div class="set-name-sub">ระบบจะใช้ชื่อนี้แสดงเมื่อรับเคส<br>ไม่ต้องกรอกทุกครั้ง</div>
+                <div class="line-user-badge">
+                  <div class="line-user-badge-avatar">🟢</div>
+                  <div>
+                    <div class="line-user-badge-name">เชื่อมต่อ LINE แล้ว ✓</div>
+                    <div class="line-user-badge-id">U3f2a1b9c...</div>
+                  </div>
+                </div>
+                <input class="input-sm" type="text" placeholder="ชื่อ-นามสกุล เช่น พญ.สมใจ" readonly>
+                <button class="btn-sm btn-blue" style="font-size:10px;">💾 บันทึกชื่อ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#E3F2FD; border-radius:8px; padding:10px 12px; font-size:12px; color:#1A237E; line-height:1.6; align-self:stretch; border:1px solid #90CAF9;">
+          <strong>ขั้นตอน:</strong><br>
+          1. กรอกชื่อ-นามสกุลจริง<br>
+          2. กด "บันทึกชื่อ"<br>
+          3. ระบบจำชื่อไว้ถาวร
+        </div>
+      </div>
+
+      <!-- State C: มี LINE Login และชื่อแล้ว -->
+      <div class="state-block">
+        <div class="state-badge state-c">สถานการณ์ที่ 3</div>
+        <div class="state-title">Login LINE แล้ว มีชื่อแล้ว</div>
+        <div class="state-sub">เคย Login LINE ไว้แล้ว<br>ระบบดึงชื่อมากรอกอัตโนมัติ</div>
+
+        <div class="phone-frame compact">
+          <div class="phone-notch">
+            <div class="phone-notch-speaker"></div>
+            <div class="phone-notch-dot"></div>
+          </div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:42</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/alerts/claim</span>
+            </div>
+            <div class="claim-page">
+              <div class="claim-page-header">
+                <div class="claim-page-title">📌 รับเคสผู้ป่วยวิกฤต</div>
+                <div class="claim-page-sub">ยืนยันตัวตน — LINE</div>
+              </div>
+              <div class="claim-page-body">
+                <div class="info-card-sm">
+                  <div class="info-card-title">🔴 LAB วิกฤต</div>
+                  <div class="info-row-sm"><span class="info-label-sm">ชื่อ-สกุล</span><span class="info-value-sm">นายสมศักดิ์ ใจดี</span></div>
+                  <div class="info-row-sm"><span class="info-label-sm">K+</span><span class="info-value-sm red">6.8 ⚠️</span></div>
+                </div>
+                <div class="line-user-badge" style="margin-bottom:8px;">
+                  <div class="line-user-badge-avatar">🟢</div>
+                  <div>
+                    <div class="line-user-badge-name">พญ.สมใจ ขยันดี</div>
+                    <div class="line-user-badge-id">เชื่อมต่อ LINE แล้ว ✓</div>
+                  </div>
+                </div>
+                <div class="section-label-sm">👤 ผู้รับเคส</div>
+                <input class="input-sm prefilled" type="text" value="พญ.สมใจ ขยันดี" readonly>
+                <button class="btn-sm btn-blue">✅ ยืนยันรับเคส</button>
+                <button class="btn-sm btn-gray">แก้ไขชื่อ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--green-pale); border-radius:8px; padding:10px 12px; font-size:12px; color:#1B5E20; line-height:1.6; align-self:stretch; border:1px solid #A5D6A7;">
+          <strong>✅ สะดวกที่สุด:</strong><br>
+          ชื่อกรอกมาให้อัตโนมัติ<br>
+          กดปุ่มเดียวเพื่อยืนยัน<br>
+          ไม่ต้องกรอกซ้ำทุกครั้ง
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 4: LINE LOGIN FLOW ===== -->
+  <div class="section page-break-before">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div>
+        <div class="section-title">ขั้นตอน LINE Login ละเอียด</div>
+        <div class="section-subtitle">กระบวนการ OAuth 2.0 ของ LINE Login ทีละขั้นตอน</div>
+      </div>
+    </div>
+
+    <div class="callout info" style="margin-bottom:24px;">
+      <span class="callout-icon">💬</span>
+      <div>
+        <strong>LINE Login</strong> ใช้มาตรฐาน OAuth 2.0 — เมื่อกด "Login with LINE"
+        ระบบจะเปิดหน้า LINE เพื่อขอสิทธิ์เข้าถึงชื่อบัญชี LINE ของคุณ ไม่มีการเก็บรหัสผ่าน
+      </div>
+    </div>
+
+    <!-- 4 step phone screens in a row -->
+    <div class="line-flow-grid">
+
+      <!-- Step L1 -->
+      <div class="line-flow-block">
+        <div class="phone-frame sm">
+          <div class="phone-notch"><div class="phone-notch-speaker"></div></div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/alerts/claim</span>
+            </div>
+            <div class="claim-page">
+              <div class="claim-page-header" style="padding:10px 12px;">
+                <div class="claim-page-title" style="font-size:11px;">📌 รับเคสผู้ป่วยวิกฤต</div>
+              </div>
+              <div class="claim-page-body">
+                <div class="info-card-sm" style="margin-bottom:8px;">
+                  <div class="info-card-title" style="font-size:10px;">🔴 LAB วิกฤต</div>
+                  <div class="info-row-sm"><span class="info-label-sm">ผู้ป่วย</span><span class="info-value-sm">นายสมศักดิ์</span></div>
+                </div>
+                <div class="section-label-sm">เข้าสู่ระบบผ่าน LINE</div>
+                <button class="btn-sm btn-line" style="font-size:9.5px;">
+                  <span>💬</span> Login with LINE
+                </button>
+                <div class="divider-sm">หรือกรอกชื่อเอง</div>
+                <input class="input-sm" type="text" placeholder="กรอกชื่อ..." readonly style="font-size:9px;">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--blue); color:#fff; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700;">ขั้น L1</div>
+        <div style="font-size:12px; font-weight:700; text-align:center; color:var(--text);">กดปุ่ม Login LINE</div>
+        <div style="font-size:11px; color:var(--gray); text-align:center; line-height:1.5;">กดปุ่ม "Login with LINE"<br>บนหน้ารับเคส</div>
+      </div>
+
+      <div style="display:flex; align-items:center; padding-top: 100px; color:var(--gray); font-size:22px;">›</div>
+
+      <!-- Step L2 -->
+      <div class="line-flow-block">
+        <div class="phone-frame sm">
+          <div class="phone-notch"><div class="phone-notch-speaker"></div></div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url" style="color:#06C755; font-weight:700;">access.line.me/oauth2</span>
+            </div>
+            <div class="line-consent" style="padding:14px 12px;">
+              <div class="line-consent-logo" style="width:46px;height:46px;font-size:26px;margin-bottom:10px;border-radius:12px;">💬</div>
+              <div class="line-consent-title" style="font-size:12px;">ล็อกอิน LINE</div>
+              <div class="line-consent-app" style="font-size:10px;">BK Alert System</div>
+              <div class="line-consent-perms" style="padding:8px 10px;margin-bottom:12px;">
+                <div class="line-consent-perm-title" style="font-size:9px;">แอปขอสิทธิ์เข้าถึง:</div>
+                <div class="line-consent-perm-item" style="font-size:10px;margin-bottom:4px;">
+                  <span class="perm-check" style="font-size:12px;">✓</span> ชื่อแสดง (Display Name)
+                </div>
+                <div class="line-consent-perm-item" style="font-size:10px;">
+                  <span class="perm-check" style="font-size:12px;">✓</span> รูปโปรไฟล์
+                </div>
+              </div>
+              <button class="line-agree-btn" style="padding:9px;font-size:11px;margin-bottom:6px;">ยินยอมและล็อกอิน</button>
+              <button class="line-cancel-btn" style="padding:7px;font-size:10px;">ยกเลิก</button>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--line-green); color:#fff; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700;">ขั้น L2</div>
+        <div style="font-size:12px; font-weight:700; text-align:center; color:var(--text);">LINE ขอสิทธิ์</div>
+        <div style="font-size:11px; color:var(--gray); text-align:center; line-height:1.5;">หน้า LINE OAuth<br>กด "ยินยอมและล็อกอิน"</div>
+      </div>
+
+      <div style="display:flex; align-items:center; padding-top: 100px; color:var(--gray); font-size:22px;">›</div>
+
+      <!-- Step L3 -->
+      <div class="line-flow-block">
+        <div class="phone-frame sm">
+          <div class="phone-notch"><div class="phone-notch-speaker"></div></div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:41</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/line/set-name</span>
+            </div>
+            <div class="set-name-page" style="padding:16px 12px;">
+              <div class="set-name-icon" style="font-size:32px;margin-bottom:8px;">👤</div>
+              <div class="set-name-title" style="font-size:12px;margin-bottom:4px;">กรุณาระบุชื่อจริง</div>
+              <div class="set-name-sub" style="font-size:10px;margin-bottom:12px;">ระบบจะจำชื่อไว้สำหรับครั้งถัดไป</div>
+              <div class="line-user-badge" style="padding:6px 8px;margin-bottom:10px;font-size:9px;">
+                <div class="line-user-badge-avatar" style="width:22px;height:22px;font-size:11px;">🟢</div>
+                <div>
+                  <div class="line-user-badge-name" style="font-size:10px;">เชื่อมต่อ LINE แล้ว ✓</div>
+                  <div class="line-user-badge-id">สมใจ ขยันดี (LINE)</div>
+                </div>
+              </div>
+              <input class="input-sm" type="text" placeholder="ชื่อ-สกุลที่ใช้งาน..." readonly style="margin-bottom:8px;">
+              <button class="btn-sm btn-blue" style="font-size:10px;">💾 บันทึกชื่อ</button>
+            </div>
+          </div>
+        </div>
+        <div style="background:#7B1FA2; color:#fff; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700;">ขั้น L3</div>
+        <div style="font-size:12px; font-weight:700; text-align:center; color:var(--text);">กรอกชื่อจริง</div>
+        <div style="font-size:11px; color:var(--gray); text-align:center; line-height:1.5;">กรอกชื่อ-สกุลที่ใช้งาน<br>(ทำแค่ครั้งแรกครั้งเดียว)</div>
+      </div>
+
+      <div style="display:flex; align-items:center; padding-top: 100px; color:var(--gray); font-size:22px;">›</div>
+
+      <!-- Step L4 -->
+      <div class="line-flow-block">
+        <div class="phone-frame sm">
+          <div class="phone-notch"><div class="phone-notch-speaker"></div></div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:42</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/alerts/claim</span>
+            </div>
+            <div class="claim-page">
+              <div class="claim-page-header" style="padding:10px 12px;">
+                <div class="claim-page-title" style="font-size:11px;">📌 รับเคสผู้ป่วยวิกฤต</div>
+              </div>
+              <div class="claim-page-body">
+                <div class="info-card-sm" style="margin-bottom:6px;">
+                  <div class="info-card-title" style="font-size:10px;">🔴 LAB วิกฤต</div>
+                  <div class="info-row-sm"><span class="info-label-sm">ผู้ป่วย</span><span class="info-value-sm">นายสมศักดิ์</span></div>
+                </div>
+                <div class="line-user-badge" style="padding:5px 8px; margin-bottom:6px; font-size:9px;">
+                  <div class="line-user-badge-avatar" style="width:20px;height:20px;font-size:10px;">🟢</div>
+                  <div>
+                    <div class="line-user-badge-name" style="font-size:10px;">พญ.สมใจ ขยันดี</div>
+                    <div class="line-user-badge-id">LINE ✓</div>
+                  </div>
+                </div>
+                <div class="section-label-sm">👤 ผู้รับเคส</div>
+                <input class="input-sm prefilled" type="text" value="พญ.สมใจ ขยันดี" readonly style="margin-bottom:6px;font-size:9.5px;">
+                <button class="btn-sm btn-blue" style="font-size:10px;">✅ ยืนยันรับเคส</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--green); color:#fff; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700;">ขั้น L4</div>
+        <div style="font-size:12px; font-weight:700; text-align:center; color:var(--text);">กลับมาหน้ารับเคส</div>
+        <div style="font-size:11px; color:var(--gray); text-align:center; line-height:1.5;">ชื่อกรอกมาให้อัตโนมัติ<br>พร้อมกดยืนยัน</div>
+      </div>
+
+    </div>
+
+    <div class="callout success" style="margin-top:28px;">
+      <span class="callout-icon">✅</span>
+      <div>
+        <strong>หมายเหตุ:</strong> ขั้น L3 (กรอกชื่อจริง) จะทำเพียงครั้งเดียวเท่านั้น
+        หลังจากนั้นทุกครั้งที่กดรับเคส ระบบจะดึงชื่อมาให้อัตโนมัติผ่าน cookie ที่มีอายุ 90 วัน
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 5: การยืนยันและผลลัพธ์ ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div>
+        <div class="section-title">ขั้นตอนที่ 3 — ยืนยันและผลลัพธ์</div>
+        <div class="section-subtitle">หลังกด "ยืนยันรับเคส" ระบบจะทำอะไรบ้าง</div>
+      </div>
+    </div>
+
+    <div class="steps-grid" style="grid-template-columns:1fr 1fr; align-items: start; gap:40px;">
+
+      <!-- Left: Success page -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div class="phone-frame">
+          <div class="phone-notch">
+            <div class="phone-notch-speaker"></div>
+            <div class="phone-notch-dot"></div>
+          </div>
+          <div class="phone-screen">
+            <div class="status-bar"><span>9:43</span><div class="status-icons"><span>🔋</span></div></div>
+            <div class="browser-bar">
+              <span class="browser-lock">🔒</span>
+              <span class="browser-url">alertmoph.bkhospital.go.th/alerts/claim</span>
+            </div>
+            <div class="claim-page">
+              <div class="claim-page-header">
+                <div class="claim-page-title">📌 รับเคสผู้ป่วยวิกฤต</div>
+              </div>
+              <div class="success-page">
+                <div class="success-icon">✅</div>
+                <div class="success-title">รับเคสสำเร็จ!</div>
+                <div class="success-sub">
+                  บันทึกการรับเคสเรียบร้อยแล้ว<br>
+                  ระบบจะแจ้งกลับทีมใน LINE
+                </div>
+                <div class="success-card">
+                  <div class="success-card-row">
+                    <span class="success-card-label">ผู้รับเคส</span>
+                    <span class="success-card-value">พญ.สมใจ ขยันดี</span>
+                  </div>
+                  <div class="success-card-row">
+                    <span class="success-card-label">เวลา</span>
+                    <span class="success-card-value">09:43 น.</span>
+                  </div>
+                  <div class="success-card-row">
+                    <span class="success-card-label">ผู้ป่วย</span>
+                    <span class="success-card-value">นายสมศักดิ์ ใจดี</span>
+                  </div>
+                  <div class="success-card-row">
+                    <span class="success-card-label">รายการ</span>
+                    <span class="success-card-value" style="color:var(--red);">K+ = 6.8 ⚠️</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:13px; color:var(--gray); text-align:center;">หน้า "รับเคสสำเร็จ"</div>
+      </div>
+
+      <!-- Right: What happens next -->
+      <div>
+        <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:16px;">
+          สิ่งที่เกิดขึ้นหลังกด "ยืนยัน"
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="background:var(--blue); color:#fff; width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">1</div>
+            <div>
+              <div style="font-size:14px; font-weight:700; color:var(--text);">บันทึกลงฐานข้อมูล</div>
+              <div style="font-size:13px; color:var(--gray); margin-top:2px; line-height:1.5;">ระบบอัปเดต status เป็น "CLAIMED" พร้อมบันทึกชื่อผู้รับเคสและเวลา</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="background:var(--line-green); color:#fff; width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">2</div>
+            <div>
+              <div style="font-size:14px; font-weight:700; color:var(--text);">ส่งแจ้งกลับห้อง LINE</div>
+              <div style="font-size:13px; color:var(--gray); margin-top:2px; line-height:1.5;">ระบบส่งข้อความยืนยันกลับไปยังห้อง LINE เดิมที่แจ้งเตือน</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="background:var(--green); color:#fff; width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">3</div>
+            <div>
+              <div style="font-size:14px; font-weight:700; color:var(--text);">เคสถูกล็อก</div>
+              <div style="font-size:13px; color:var(--gray); margin-top:2px; line-height:1.5;">เคสนี้ถูกบันทึกว่ารับแล้ว ถ้ากดลิงก์เดิมซ้ำจะเห็นว่า "รับเคสแล้ว"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Claimed notification preview -->
+        <div style="font-size:15px; font-weight:700; color:var(--text-2); margin-bottom:12px;">
+          💬 ข้อความที่ส่งกลับห้อง LINE
+        </div>
+        <div style="background:#C9DBBF; border-radius:12px; padding:12px;">
+          <div class="chat-bot-msg">
+            <div class="bot-avatar">🤖</div>
+            <div class="bubble-wrap">
+              <div class="bubble-sender">BK Alert Bot</div>
+              <div class="claimed-bubble">
+                <div class="claimed-bubble-header">
+                  ✅ รับเคสแล้ว
+                </div>
+                <div class="claimed-bubble-body">
+                  <div class="claimed-bubble-row">
+                    <span style="color:var(--gray);min-width:60px;">ผู้รับเคส</span>
+                    <span style="font-weight:600;">พญ.สมใจ ขยันดี</span>
+                  </div>
+                  <div class="claimed-bubble-row">
+                    <span style="color:var(--gray);min-width:60px;">ผู้ป่วย</span>
+                    <span style="font-weight:600;">นายสมศักดิ์ ใจดี</span>
+                  </div>
+                  <div class="claimed-bubble-row">
+                    <span style="color:var(--gray);min-width:60px;">HN</span>
+                    <span>12345</span>
+                  </div>
+                  <div class="claimed-bubble-row">
+                    <span style="color:var(--gray);min-width:60px;">รายการ</span>
+                    <span style="color:var(--red);font-weight:600;">K+ = 6.8 ⚠️</span>
+                  </div>
+                  <div class="claimed-bubble-row">
+                    <span style="color:var(--gray);min-width:60px;">เวลา</span>
+                    <span>09:43 น.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 6: กรณีพิเศษ ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div>
+        <div class="section-title">กรณีพิเศษและข้อผิดพลาด</div>
+        <div class="section-subtitle">สถานการณ์ที่อาจพบและวิธีแก้ไข</div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <div style="background:#FFEBEE; border-radius:12px; padding:18px 20px; border-left:4px solid #C62828;">
+        <div style="font-size:15px; font-weight:700; color:#C62828; margin-bottom:10px; display:flex;align-items:center;gap:8px;">
+          ⏱️ ลิงก์หมดอายุ
+        </div>
+        <div style="font-size:13px; color:#4E342E; line-height:1.7;">
+          <strong>สาเหตุ:</strong> ลิงก์มีอายุ 1 ชั่วโมง<br>
+          <strong>อาการ:</strong> หน้าแสดง "กรุณาขอลิงก์ใหม่"<br>
+          <strong>วิธีแก้:</strong> รอรอบถัดไป (ทุก 5 นาที) ระบบจะส่งลิงก์ใหม่ถ้ายังไม่มีใครรับเคสนั้น
+        </div>
+      </div>
+
+      <div style="background:#FFF9C4; border-radius:12px; padding:18px 20px; border-left:4px solid #F9A825;">
+        <div style="font-size:15px; font-weight:700; color:#E65100; margin-bottom:10px; display:flex;align-items:center;gap:8px;">
+          🔄 เคสถูกรับไปแล้ว
+        </div>
+        <div style="font-size:13px; color:#4E342E; line-height:1.7;">
+          <strong>สาเหตุ:</strong> เจ้าหน้าที่อื่นรับเคสไปก่อน<br>
+          <strong>อาการ:</strong> หน้าแสดง "เคสนี้รับแล้วโดย [ชื่อ]"<br>
+          <strong>วิธีแก้:</strong> ไม่ต้องทำอะไร เคสนั้นมีผู้รับแล้ว
+        </div>
+      </div>
+
+      <div style="background:#E8F5E9; border-radius:12px; padding:18px 20px; border-left:4px solid #2E7D32;">
+        <div style="font-size:15px; font-weight:700; color:#2E7D32; margin-bottom:10px; display:flex;align-items:center;gap:8px;">
+          💬 LINE Login ล้มเหลว
+        </div>
+        <div style="font-size:13px; color:#1B5E20; line-height:1.7;">
+          <strong>สาเหตุ:</strong> กด "ยกเลิก" ในหน้า LINE OAuth<br>
+          <strong>อาการ:</strong> กลับมาที่หน้ารับเคส (ไม่ได้ล็อกอิน)<br>
+          <strong>วิธีแก้:</strong> กรอกชื่อด้วยตนเองได้เลย
+        </div>
+      </div>
+
+      <div style="background:#E3F2FD; border-radius:12px; padding:18px 20px; border-left:4px solid #1565C0;">
+        <div style="font-size:15px; font-weight:700; color:#1565C0; margin-bottom:10px; display:flex;align-items:center;gap:8px;">
+          ✏️ ต้องการแก้ไขชื่อ LINE
+        </div>
+        <div style="font-size:13px; color:#1A237E; line-height:1.7;">
+          <strong>วิธีแก้:</strong> กดปุ่ม "แก้ไขชื่อ" บนหน้ารับเคส<br>
+          ระบบจะพาไปหน้ากรอกชื่อใหม่<br>
+          ชื่อที่บันทึกจะแทนที่ชื่อเดิม
+        </div>
+      </div>
+
+    </div>
+
+    <div class="tips-box" style="margin-top:20px;">
+      <div class="tips-title">📋 สรุป — ใช้ LINE Login หรือกรอกชื่อเอง?</div>
+      <ul class="tips-list">
+        <li><strong>LINE Login (แนะนำ):</strong> สะดวกกว่า — ครั้งแรกตั้งชื่อ ครั้งถัดไปกดยืนยันได้เลย ระบบจดชื่อไว้ 90 วัน</li>
+        <li><strong>กรอกชื่อเอง:</strong> ต้องกรอกทุกครั้ง แต่ใช้งานได้ถ้าไม่สะดวก Login LINE</li>
+        <li>ทั้งสองวิธีบันทึกชื่อผู้รับเคสเหมือนกัน ผลไม่ต่างกัน</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 7: สรุปขั้นตอนทั้งหมด ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div>
+        <div class="section-title">สรุปขั้นตอนทั้งหมด (Quick Reference)</div>
+        <div class="section-subtitle">ขั้นตอนสั้นๆ สำหรับพิมพ์ติดไว้</div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+
+      <!-- Column 1 -->
+      <div>
+        <div style="font-size:16px; font-weight:700; color:var(--blue); margin-bottom:16px;">
+          🟢 วิธีที่ 1 — ใช้ LINE Login (แนะนำ)
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px; align-items:flex-start; background:#f8f9fa; border-radius:10px; padding:12px 14px;">
+            <div style="background:var(--blue);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>
+            <div style="font-size:13px; line-height:1.6;">รับการแจ้งเตือนใน LINE → กดปุ่ม <strong>"📌 รับเคส"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; background:#f8f9fa; border-radius:10px; padding:12px 14px;">
+            <div style="background:var(--blue);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>
+            <div style="font-size:13px; line-height:1.6;">หน้าเว็บเปิดขึ้น → กด <strong>"Login with LINE"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; background:#f8f9fa; border-radius:10px; padding:12px 14px;">
+            <div style="background:var(--line-green);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</div>
+            <div style="font-size:13px; line-height:1.6;">LINE ขอสิทธิ์ → กด <strong>"ยินยอมและล็อกอิน"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; background:#f8f9fa; border-radius:10px; padding:12px 14px;">
+            <div style="background:#7B1FA2;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">4</div>
+            <div style="font-size:13px; line-height:1.6;"><span style="color:var(--gray);">(ครั้งแรก)</span> กรอกชื่อจริง → กด <strong>"บันทึกชื่อ"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; background:var(--green-pale); border-radius:10px; padding:12px 14px; border:1px solid #A5D6A7;">
+            <div style="background:var(--green);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">5</div>
+            <div style="font-size:13px; line-height:1.6;">ชื่อกรอกให้อัตโนมัติ → กด <strong>"✅ ยืนยันรับเคส"</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2 -->
+      <div>
+        <div style="font-size:16px; font-weight:700; color:var(--text-2); margin-bottom:16px;">
+          🔵 วิธีที่ 2 — กรอกชื่อด้วยตนเอง
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px; align-items:flex-start; background:#f8f9fa; border-radius:10px; padding:12px 14px;">
+            <div style="background:var(--blue);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>
+            <div style="font-size:13px; line-height:1.6;">รับการแจ้งเตือนใน LINE → กดปุ่ม <strong>"📌 รับเคส"</strong></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; background:#f8f9fa; border-radius:10px; padding:12px 14px;">
+            <div style="background:var(--blue);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>
+            <div style="font-size:13px; line-height:1.6;">หน้าเว็บเปิดขึ้น → พิมพ์ <strong>ชื่อ-นามสกุล</strong> ในช่องกรอกชื่อ</div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start; background:var(--green-pale); border-radius:10px; padding:12px 14px; border:1px solid #A5D6A7;">
+            <div style="background:var(--green);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</div>
+            <div style="font-size:13px; line-height:1.6;">กด <strong>"✅ ยืนยันรับเคส"</strong></div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px; background:#f0f4f8; border-radius:10px; padding:14px 16px;">
+          <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:8px;">📍 URL ระบบรับเคส</div>
+          <div style="font-size:12px; color:var(--gray); margin-bottom:6px;">เข้าได้จาก Public Internet</div>
+          <div style="background:#fff; border-radius:8px; padding:8px 12px; font-size:12px; font-family:monospace; color:var(--blue); border:1px solid #ddd; word-break:break-all;">
+            alertmoph.bkhospital.go.th/alerts/claim
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end page-wrapper -->
+
+<script>
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', function(e) {
+    e.preventDefault();
+    const el = document.querySelector(this.getAttribute('href'));
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+
+</body>
+</html>
