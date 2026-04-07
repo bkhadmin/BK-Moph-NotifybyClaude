@@ -29,6 +29,7 @@ def _run_migrations():
             updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
         "ALTER TABLE schedule_jobs ADD COLUMN use_alertroom VARCHAR(1) NOT NULL DEFAULT 'N'",
+        "ALTER TABLE alert_cases MODIFY COLUMN item_name TEXT",
     ]
     with engine.connect() as conn:
         for sql in migrations:

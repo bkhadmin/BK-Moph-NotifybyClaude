@@ -13,7 +13,7 @@ class AlertCase(Base):
     patient_hn: Mapped[str | None] = mapped_column(String(50), nullable=True)
     patient_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     department: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    item_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    item_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     item_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
     report_date_text: Mapped[str | None] = mapped_column(String(50), nullable=True)
     report_time_text: Mapped[str | None] = mapped_column(String(50), nullable=True)
