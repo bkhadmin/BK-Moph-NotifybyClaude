@@ -201,6 +201,15 @@ def execute_job(db, job):
             room_code_to_id = {r.room_code: r.id for r in target_rooms}
             send_log_id = None
             result = {}
+            if not target_rooms:
+                # ไม่พบห้องที่ตรงกับ alertroom → fallback ไป default room (.env)
+                r, lid = asyncio.run(send_with_log(
+                    db, "scheduler", messages,
+                    f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, alertroom=fallback",
+                    notify_room_id=None,
+                ))
+                result = dict(r or {})
+                send_log_id = lid
             for room in target_rooms:
                 r, lid = asyncio.run(send_with_log(
                     db, "scheduler", messages,
