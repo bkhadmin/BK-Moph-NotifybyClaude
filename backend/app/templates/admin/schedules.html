@@ -68,11 +68,12 @@
       <label>Notify Room</label>
       <select class="input" name="notify_room_id">
         <option value="">Default (.env)</option>
+        <option value="alertroom" {% if form_values and form_values.notify_room_id == 'alertroom' %}selected{% endif %}>📡 ห้องอัตโนมัติ (alertroom)</option>
         {% for room in notify_rooms or [] %}
         <option value="{{ room.id }}" {% if form_values and form_values.notify_room_id|string == room.id|string %}selected{% endif %}>{{ room.name }}{% if room.room_code %} ({{ room.room_code }}){% endif %}</option>
         {% endfor %}
       </select>
-      <div class="muted mt-2">กำหนดว่า schedule นี้จะส่งไปห้องไหน ถ้าไม่เลือกจะใช้ค่า default จาก .env</div>
+      <div class="muted mt-2">กำหนดว่า schedule นี้จะส่งไปห้องไหน — "ห้องอัตโนมัติ" จะอ่าน field <code>alertroom</code> จาก query แล้วส่งไปห้องที่ room_code ตรงกัน</div>
     </div>
 
     <div class="mt-3">

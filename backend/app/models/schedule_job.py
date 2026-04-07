@@ -15,4 +15,5 @@ class ScheduleJob(Base):
     next_run_at:Mapped[object|None]=mapped_column(DateTime, nullable=True)
     last_run_at:Mapped[object|None]=mapped_column(DateTime, nullable=True)
     is_active:Mapped[str]=mapped_column(String(1), default='Y', nullable=False)
+    use_alertroom:Mapped[str|None]=mapped_column(String(1), default='N', nullable=True)
     payload_json:Mapped[str|None]=mapped_column(Text, nullable=True)

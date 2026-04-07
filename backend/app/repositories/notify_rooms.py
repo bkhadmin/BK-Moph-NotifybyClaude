@@ -28,3 +28,10 @@ def update_item(db: Session, row: NotifyRoom, **kwargs):
 def delete_item(db: Session, row: NotifyRoom):
     db.delete(row)
     db.commit()
+
+def get_by_room_codes(db: Session, codes: list):
+    """คืน notify_rooms ที่ room_code ตรงกับ codes ที่ระบุ (active only)"""
+    codes = [c.strip() for c in (codes or []) if str(c).strip()]
+    if not codes:
+        return []
+    return db.query(NotifyRoom).filter(NotifyRoom.room_code.in_(codes), NotifyRoom.is_active == 'Y').all()

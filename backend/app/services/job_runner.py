@@ -83,8 +83,22 @@ async def run_job(db: Session, job):
     if not messages:
         return None
 
-    notify_room_id = getattr(job, 'notify_room_id', None)
-    await send_with_log(db, 'scheduler', messages, f'job_id={job.id}', notify_room_id=notify_room_id)
+    use_alertroom = getattr(job, 'use_alertroom', 'N') == 'Y'
+    if use_alertroom:
+        # รวม alertroom codes จากทุก row แล้วส่งไปแต่ละห้อง
+        codes = set()
+        for row in rows:
+            av = str(row.get('alertroom') or '').strip()
+            for c in av.split(','):
+                if c.strip():
+                    codes.add(c.strip())
+        from app.repositories.notify_rooms import get_by_room_codes
+        target_rooms = get_by_room_codes(db, list(codes))
+        for room in target_rooms:
+            await send_with_log(db, 'scheduler', messages, f'job_id={job.id},alertroom={room.room_code}', notify_room_id=room.id)
+    else:
+        notify_room_id = getattr(job, 'notify_room_id', None)
+        await send_with_log(db, 'scheduler', messages, f'job_id={job.id}', notify_room_id=notify_room_id)
 
     if template_type in _CLAIM_TYPES:
         try:

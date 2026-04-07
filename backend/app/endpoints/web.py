@@ -1321,7 +1321,7 @@ def schedules_page(request:Request, db:Session=Depends(get_db)):
             'interval_minutes': str(edit_job.interval_minutes or ''),
             'approved_query_id': edit_job.approved_query_id or '',
             'message_template_id': edit_job.message_template_id or '',
-            'notify_room_id': getattr(edit_job, 'notify_room_id', '') or '',
+            'notify_room_id': 'alertroom' if getattr(edit_job, 'use_alertroom', 'N') == 'Y' else (getattr(edit_job, 'notify_room_id', '') or ''),
             'is_active': edit_job.is_active,
             'retry_limit': str(cfg.get('retry_limit', 3)),
         }
@@ -1338,7 +1338,7 @@ def schedules_create(
     interval_minutes:str=Form(''),
     approved_query_id:int|None=Form(None),
     message_template_id:int|None=Form(None),
-    notify_room_id:int|None=Form(None),
+    notify_room_id:str=Form(''),
     is_active:str=Form('Y'),
     retry_limit:str=Form('3'),
     db:Session=Depends(get_db)
@@ -1352,6 +1352,10 @@ def schedules_create(
             normalized_interval = int(str(interval_minutes).strip())
         next_run_at = parse_next_run(schedule_type, normalized_cron or None, normalized_interval, base=scheduler_now())
         payload_json = json.dumps({'retry_limit': int(str(retry_limit or '3').strip() or '3'), 'retry_count': 0}, ensure_ascii=False)
+        # Parse notify_room_id — "alertroom" = ห้องอัตโนมัติ, int string = fixed room, empty = default
+        _room_raw = (notify_room_id or '').strip()
+        _use_alertroom = 'Y' if _room_raw == 'alertroom' else 'N'
+        _notify_room_id = None if _room_raw in ('', 'alertroom') else (int(_room_raw) if _room_raw.isdigit() else None)
         if str(schedule_id or '').strip():
             row = get_job_by_id(db, int(schedule_id))
             if not row:
@@ -1365,7 +1369,8 @@ def schedules_create(
                 interval_minutes=normalized_interval,
                 approved_query_id=approved_query_id,
                 message_template_id=message_template_id,
-                notify_room_id=notify_room_id,
+                notify_room_id=_notify_room_id,
+                use_alertroom=_use_alertroom,
                 next_run_at=next_run_at,
                 is_active=is_active,
                 payload_json=payload_json,
@@ -1379,7 +1384,8 @@ def schedules_create(
                 interval_minutes=normalized_interval,
                 approved_query_id=approved_query_id,
                 message_template_id=message_template_id,
-                notify_room_id=notify_room_id,
+                notify_room_id=_notify_room_id,
+                use_alertroom=_use_alertroom,
                 next_run_at=next_run_at,
                 is_active=is_active,
                 payload_json=payload_json,
@@ -1405,7 +1411,7 @@ def schedules_create(
                     'interval_minutes': str(interval_minutes or '').strip(),
                     'approved_query_id': approved_query_id or '',
                     'message_template_id': message_template_id or '',
-                    'notify_room_id': notify_room_id or '',
+                    'notify_room_id': (notify_room_id or '').strip(),
                     'is_active': is_active,
                     'retry_limit': retry_limit,
                 }
