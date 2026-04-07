@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     line_login_redirect_uri:str='http://192.168.191.12:8012/line/callback'
     line_login_cookie_name:str='bk_line_uid'
     line_login_cookie_days:int=90
+    line_login_cookie_secure:bool=True
 
     moph_notify_base_url:str='https://morpromt2f.moph.go.th'
     moph_notify_send_path:str='/api/notify/send'

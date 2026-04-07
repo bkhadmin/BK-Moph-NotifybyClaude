@@ -1752,7 +1752,7 @@ async def line_callback(request: Request, code: str = '', state: str = '', error
         line_uid,
         max_age=settings.line_login_cookie_days * 86400,
         httponly=True,
-        secure=settings.session_cookie_secure,
+        secure=settings.line_login_cookie_secure,
         samesite='lax',
         path='/',
     )
