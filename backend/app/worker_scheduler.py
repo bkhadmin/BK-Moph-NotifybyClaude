@@ -187,34 +187,72 @@ def execute_job(db, job):
             print(f"[scheduler] no_data job_id={job.id} next_run_at={next_run} room_id={getattr(job, 'notify_room_id', None)}")
             return {"status": "no_data", "rows": len(rows) if rows else 0, "sent": 0}
 
-        result, send_log_id = asyncio.run(
-            send_with_log(
-                db,
-                "scheduler",
-                messages,
-                _detail(job),
-                notify_room_id=getattr(job, "notify_room_id", None),
+        use_alertroom = getattr(job, 'use_alertroom', 'N') == 'Y'
+        if use_alertroom:
+            # รวม alertroom codes จากทุก row แล้วส่งไปแต่ละห้อง
+            codes = set()
+            for row in rows:
+                av = str(row.get('alertroom') or '').strip()
+                for c in av.split(','):
+                    if c.strip():
+                        codes.add(c.strip())
+            from app.repositories.notify_rooms import get_by_room_codes
+            target_rooms = get_by_room_codes(db, list(codes))
+            room_code_to_id = {r.room_code: r.id for r in target_rooms}
+            send_log_id = None
+            result = {}
+            for room in target_rooms:
+                r, lid = asyncio.run(send_with_log(
+                    db, "scheduler", messages,
+                    f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, alertroom={room.room_code}",
+                    notify_room_id=room.id,
+                ))
+                result = dict(r or {})
+                send_log_id = lid
+            result["send_log_id"] = send_log_id
+            updated_cases = 0
+            for row in rows or []:
+                try:
+                    case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
+                    lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
+                    if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
+                        updated_cases += 1
+                    row_code = str(row.get('alertroom') or '').strip().split(',')[0].strip()
+                    row_room_id = room_code_to_id.get(row_code)
+                    if row_room_id and case_key:
+                        db.execute(
+                            text("UPDATE alert_cases SET notify_room_id=:rid WHERE case_key=:ck AND notify_room_id IS NULL"),
+                            {"rid": row_room_id, "ck": case_key}
+                        )
+                except Exception:
+                    pass
+        else:
+            result, send_log_id = asyncio.run(
+                send_with_log(
+                    db,
+                    "scheduler",
+                    messages,
+                    _detail(job),
+                    notify_room_id=getattr(job, "notify_room_id", None),
+                )
             )
-        )
-        result = dict(result or {})
-        result["send_log_id"] = send_log_id
-
-        updated_cases = 0
-        job_notify_room_id = getattr(job, "notify_room_id", None)
-        for row in rows or []:
-            try:
-                case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
-                lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
-                if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
-                    updated_cases += 1
-                # Store which room sent this alert so claim-notify goes back to the same room
-                if job_notify_room_id and case_key:
-                    db.execute(
-                        text("UPDATE alert_cases SET notify_room_id=:rid WHERE case_key=:ck AND notify_room_id IS NULL"),
-                        {"rid": job_notify_room_id, "ck": case_key}
-                    )
-            except Exception:
-                pass
+            result = dict(result or {})
+            result["send_log_id"] = send_log_id
+            updated_cases = 0
+            job_notify_room_id = getattr(job, "notify_room_id", None)
+            for row in rows or []:
+                try:
+                    case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
+                    lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
+                    if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
+                        updated_cases += 1
+                    if job_notify_room_id and case_key:
+                        db.execute(
+                            text("UPDATE alert_cases SET notify_room_id=:rid WHERE case_key=:ck AND notify_room_id IS NULL"),
+                            {"rid": job_notify_room_id, "ck": case_key}
+                        )
+                except Exception:
+                    pass
         db.commit()
         db.expire_all()
         result["updated_cases"] = updated_cases
