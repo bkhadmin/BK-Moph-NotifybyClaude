@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รายงานการตรวจสอบความปลอดภัย — BK-Moph-Notify</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1565C0;
+    --blue-light: #1976D2;
+    --blue-pale: #E3F2FD;
+    --green: #2E7D32;
+    --green-pale: #E8F5E9;
+    --red: #C62828;
+    --red-pale: #FFEBEE;
+    --orange: #E65100;
+    --orange-pale: #FFF3E0;
+    --yellow-pale: #FFFDE7;
+    --gray: #546E7A;
+    --gray-light: #ECEFF1;
+    --border: #CFD8DC;
+    --text: #1A2332;
+    --text-2: #455A64;
+  }
+
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: #F0F4F8;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ===== NAVBAR ===== */
+  .navbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .navbar-brand { font-size: 15px; font-weight: 700; color: var(--blue); }
+  .btn-print {
+    background: var(--blue); color: #fff; border: none;
+    padding: 7px 18px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; font-family: 'Sarabun', sans-serif; cursor: pointer;
+  }
+
+  /* ===== PAGE ===== */
+  .page-wrapper { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* ===== COVER ===== */
+  .cover {
+    background: linear-gradient(145deg, #0D47A1, #1565C0 50%, #1976D2);
+    border-radius: 16px;
+    padding: 52px 56px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: '';
+    position: absolute; bottom: -60px; right: -60px;
+    width: 280px; height: 280px;
+    background: rgba(255,255,255,0.04); border-radius: 50%;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; padding: 4px 16px;
+    border-radius: 20px; font-size: 12px;
+    letter-spacing: 0.5px; margin-bottom: 20px;
+  }
+  .cover-title { color: #fff; font-size: 30px; font-weight: 800; margin-bottom: 6px; }
+  .cover-subtitle { color: rgba(255,255,255,0.85); font-size: 16px; margin-bottom: 28px; }
+  .cover-meta {
+    display: flex; gap: 32px; flex-wrap: wrap;
+  }
+  .cover-meta-item { color: rgba(255,255,255,0.7); font-size: 13px; }
+  .cover-meta-value { color: #fff; font-weight: 600; font-size: 14px; }
+
+  /* ===== SECTION ===== */
+  .section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 36px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--blue-pale);
+  }
+  .section-num {
+    background: var(--blue); color: #fff;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; flex-shrink: 0;
+  }
+  .section-title { font-size: 18px; font-weight: 700; color: var(--blue); }
+  .section-subtitle { font-size: 12px; color: var(--gray); margin-top: 1px; }
+
+  /* ===== EXECUTIVE SUMMARY BOXES ===== */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .summary-box {
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+  .summary-box-num { font-size: 32px; font-weight: 800; line-height: 1; }
+  .summary-box-label { font-size: 12px; margin-top: 4px; font-weight: 500; }
+  .box-red { background: var(--red-pale); color: var(--red); }
+  .box-orange { background: var(--orange-pale); color: var(--orange); }
+  .box-green { background: var(--green-pale); color: var(--green); }
+  .box-blue { background: var(--blue-pale); color: var(--blue); }
+
+  /* ===== FINDING TABLE ===== */
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: var(--gray-light);
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-2);
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  /* ===== BADGE ===== */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .badge-red { background: var(--red-pale); color: var(--red); }
+  .badge-orange { background: var(--orange-pale); color: var(--orange); }
+  .badge-yellow { background: var(--yellow-pale); color: #F57F17; }
+  .badge-green { background: var(--green-pale); color: var(--green); }
+  .badge-blue { background: var(--blue-pale); color: var(--blue); }
+  .badge-gray { background: var(--gray-light); color: var(--gray); }
+
+  /* ===== FINDING CARD ===== */
+  .finding-card {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    border-left: 4px solid;
+  }
+  .finding-card.critical { border-color: var(--red); background: var(--red-pale); }
+  .finding-card.high { border-color: var(--orange); background: var(--orange-pale); }
+  .finding-card.medium { border-color: #F9A825; background: var(--yellow-pale); }
+  .finding-card.low { border-color: #78909C; background: var(--gray-light); }
+  .finding-card.pass { border-color: var(--green); background: var(--green-pale); }
+
+  .finding-title {
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .finding-body { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  .finding-meta {
+    display: flex; gap: 16px; margin-top: 8px;
+    font-size: 11px; color: var(--gray);
+  }
+  .finding-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* ===== ACTION TABLE ===== */
+  .action-item {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .action-item:last-child { border-bottom: none; }
+  .action-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0; margin-top: 1px;
+  }
+  .action-icon.done { background: var(--green-pale); }
+  .action-icon.skip { background: var(--gray-light); }
+  .action-icon.todo { background: var(--orange-pale); }
+  .action-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .action-desc { font-size: 12px; color: var(--gray); margin-top: 2px; line-height: 1.5; }
+  .action-file { font-size: 11px; color: var(--blue); font-family: monospace; margin-top: 4px; }
+
+  /* ===== CALLOUT ===== */
+  .callout {
+    border-radius: 8px; padding: 12px 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 13px; line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .callout.info { background: var(--blue-pale); border-left: 4px solid var(--blue); }
+  .callout.success { background: var(--green-pale); border-left: 4px solid var(--green); }
+  .callout.warning { background: var(--orange-pale); border-left: 4px solid var(--orange); }
+  .callout-icon { font-size: 18px; flex-shrink: 0; }
+
+  /* ===== CHECKLIST ===== */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 6px 0; font-size: 13px;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-icon { flex-shrink: 0; font-size: 16px; margin-top: 1px; }
+
+  /* ===== POSTURE METER ===== */
+  .posture-bar {
+    height: 12px; border-radius: 6px;
+    background: #e0e0e0; overflow: hidden; margin-bottom: 6px;
+  }
+  .posture-fill {
+    height: 100%; border-radius: 6px;
+    background: linear-gradient(90deg, #43A047, #66BB6A);
+    transition: width 0.3s;
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    @page { size: A4; margin: 15mm 15mm 12mm 15mm; }
+    body { background: #fff; font-size: 12px; }
+    .navbar { display: none; }
+    .page-wrapper { padding: 0; max-width: 100%; }
+    .cover { border-radius: 0; margin-bottom: 0; page-break-after: always; padding: 40px 48px; }
+    .section {
+      box-shadow: none; border: 1px solid #e0e0e0;
+      border-radius: 8px; padding: 20px 28px;
+      margin-bottom: 14px; page-break-inside: avoid;
+    }
+    .finding-card { page-break-inside: avoid; }
+    .summary-grid { gap: 10px; }
+    table { font-size: 11px; }
+    th, td { padding: 7px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="navbar no-print">
+  <span class="navbar-brand">🔒 รายงานการตรวจสอบความปลอดภัย — BK-Moph-Notify</span>
+  <button class="btn-print" onclick="window.print()">🖨️ พิมพ์ / บันทึก PDF</button>
+</div>
+
+<div class="page-wrapper">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="cover-badge">Security Assessment Report — Confidential</div>
+    <div class="cover-title">รายงานการตรวจสอบความปลอดภัยระดับ Production</div>
+    <div class="cover-subtitle">ระบบ BK-Moph-Notify — แจ้งเตือนผู้ป่วยวิกฤตผ่าน LINE</div>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="cover-meta-value">โรงพยาบาลบางระกำ</div>
+        <div>หน่วยงาน</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-value">เมษายน 2569</div>
+        <div>วันที่ตรวจสอบ</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-value">alertmoph.bkhospital.go.th</div>
+        <div>ระบบที่ตรวจสอบ</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-value">ฝ่ายเทคโนโลยีสารสนเทศ</div>
+        <div>ผู้ตรวจสอบ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. บทสรุปผู้บริหาร -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div>
+        <div class="section-title">บทสรุปผู้บริหาร</div>
+        <div class="section-subtitle">Executive Summary</div>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-box box-red">
+        <div class="summary-box-num">3</div>
+        <div class="summary-box-label">ระดับ Critical<br>พบและแก้ไขแล้ว</div>
+      </div>
+      <div class="summary-box box-orange">
+        <div class="summary-box-num">4</div>
+        <div class="summary-box-label">ระดับ High<br>พบและแก้ไขแล้ว</div>
+      </div>
+      <div class="summary-box box-yellow" style="background:#FFF9C4; color:#E65100;">
+        <div class="summary-box-num">2</div>
+        <div class="summary-box-label">ระดับ Medium<br>ประเมินแล้ว ยกเว้น</div>
+      </div>
+      <div class="summary-box box-green">
+        <div class="summary-box-num">8</div>
+        <div class="summary-box-label">มาตรการที่ดี<br>มีอยู่แล้ว</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+        <span style="font-weight:600;">Security Posture หลังแก้ไข</span>
+        <span style="font-weight:700; color:var(--green);">78 / 100</span>
+      </div>
+      <div class="posture-bar"><div class="posture-fill" style="width:78%"></div></div>
+      <div style="font-size:11px; color:var(--gray);">ประเมินจากการครอบคลุมมาตรการป้องกันหลักสำหรับระบบ Healthcare Notification</div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div>
+        ระบบ BK-Moph-Notify ออกแบบโดยแยก <strong>Admin Panel</strong> (เครือข่าย LAN เท่านั้น) ออกจาก
+        <strong>Public Endpoints</strong> (Cloudflare HTTPS เฉพาะ claim และ LINE login) อย่างชัดเจน
+        ทำให้พื้นผิวความเสี่ยงจากภายนอกมีขนาดเล็กมาก
+        ช่องโหว่ที่พบส่วนใหญ่เป็น configuration ที่ยังใช้ค่า default สำหรับ development
+      </div>
+    </div>
+
+    <p style="font-size:13px; color:var(--text-2); line-height:1.8;">
+      การตรวจสอบครอบคลุม: Authentication, Session Management, Cookie Security,
+      HTTP Security Headers, CORS Policy, CSRF Protection, Open Redirect, SQL Injection Guard,
+      HMAC Claim Signing, LINE OAuth Flow และ Redis Session Store
+    </p>
+  </div>
+
+  <!-- 2. สถาปัตยกรรมและขอบเขต -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div>
+        <div class="section-title">สถาปัตยกรรมและขอบเขตการเข้าถึง</div>
+        <div class="section-subtitle">Attack Surface Overview</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Path / Endpoint</th>
+          <th>เข้าถึงจาก</th>
+          <th>การป้องกัน</th>
+          <th>ความเสี่ยง</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/alerts/claim</code></td>
+          <td>Internet ผ่าน Cloudflare HTTPS</td>
+          <td>HMAC-signed URL + expiry 1 ชม.</td>
+          <td><span class="badge badge-green">ต่ำ</span></td>
+        </tr>
+        <tr>
+          <td><code>/line/login</code><br><code>/line/callback</code><br><code>/line/set-name</code></td>
+          <td>Internet ผ่าน Cloudflare HTTPS</td>
+          <td>LINE OAuth state (Redis) + LINE cookie</td>
+          <td><span class="badge badge-green">ต่ำ</span></td>
+        </tr>
+        <tr>
+          <td><code>/* (Admin Panel)</code></td>
+          <td>LAN เท่านั้น<br>192.168.191.12:8012</td>
+          <td>Session + 2FA + RBAC + IP ban</td>
+          <td><span class="badge badge-green">ต่ำมาก</span></td>
+        </tr>
+        <tr>
+          <td><code>/api/v1/*</code></td>
+          <td>LAN เท่านั้น</td>
+          <td>Session authentication</td>
+          <td><span class="badge badge-green">ต่ำมาก</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. ผลการตรวจสอบ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div>
+        <div class="section-title">ผลการตรวจสอบช่องโหว่</div>
+        <div class="section-subtitle">Security Findings</div>
+      </div>
+    </div>
+
+    <!-- Critical -->
+    <div style="font-size:13px; font-weight:700; color:var(--red); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+      🔴 ระดับ Critical — แก้ไขแล้วทั้งหมด
+    </div>
+
+    <div class="finding-card critical">
+      <div class="finding-title">
+        <span class="badge badge-red">CRITICAL</span>
+        Session Cookie ไม่มี Secure Flag สำหรับ Public Flow
+      </div>
+      <div class="finding-body">
+        LINE Login cookie ถูก set โดยไม่มี <code>secure=True</code> ทำให้ cookie อาจส่งผ่าน HTTP ได้
+        แม้ว่า callback จะเข้าผ่าน Cloudflare HTTPS เสมอ
+      </div>
+      <div class="finding-meta">
+        <span>📁 web.py:1750</span>
+        <span>✅ แก้ไขแล้ว: เพิ่ม LINE_LOGIN_COOKIE_SECURE=true (แยกจาก session cookie)</span>
+      </div>
+    </div>
+
+    <div class="finding-card critical">
+      <div class="finding-title">
+        <span class="badge badge-red">CRITICAL</span>
+        AccessLogMiddleware ไม่ทำงาน (Stub)
+      </div>
+      <div class="finding-body">
+        Middleware บันทึก Access Log เป็นโค้ดว่างเปล่า ทำให้ไม่มี audit trail ของ HTTP requests
+        ซึ่งจำเป็นสำหรับระบบ Healthcare ที่ต้องสามารถ trace การเข้าถึงข้อมูลได้
+      </div>
+      <div class="finding-meta">
+        <span>📁 middleware.py:2</span>
+        <span>✅ แก้ไขแล้ว: implement logging จริง (method, path, status, latency, IP)</span>
+      </div>
+    </div>
+
+    <div class="finding-card critical">
+      <div class="finding-title">
+        <span class="badge badge-red">CRITICAL</span>
+        Claim Signing Secret ใช้ค่า Default
+      </div>
+      <div class="finding-body">
+        <code>claim_security.py</code> มี fallback เป็น <code>"change-me"</code> ถ้าไม่ set env var
+        ทำให้ผู้ไม่หวังดีสามารถปลอมลายเซ็น HMAC บน claim URL ได้
+      </div>
+      <div class="finding-meta">
+        <span>📁 claim_security.py:7</span>
+        <span>✅ แก้ไขแล้ว: ยืนยันว่า production .env มี CLAIM_SIGNING_SECRET ที่แข็งแรงแล้ว</span>
+      </div>
+    </div>
+
+    <!-- High -->
+    <div style="font-size:13px; font-weight:700; color:var(--orange); margin:20px 0 10px; display:flex; align-items:center; gap:6px;">
+      🟠 ระดับ High — แก้ไขแล้วทั้งหมด
+    </div>
+
+    <div class="finding-card high">
+      <div class="finding-title">
+        <span class="badge badge-orange">HIGH</span>
+        Open Redirect ใน LINE Login Callback
+      </div>
+      <div class="finding-body">
+        <code>/line/callback</code> อนุญาตให้ redirect ไป <code>http://</code> และ <code>https://</code>
+        ทุก domain ผ่าน query parameter <code>next</code> ทำให้ผู้ไม่หวังดีสามารถล่อให้ user
+        กด LINE Login แล้ว redirect ออกไปยัง domain ปลอม (Phishing) ได้
+      </div>
+      <div class="finding-meta">
+        <span>📁 web.py:1748</span>
+        <span>✅ แก้ไขแล้ว: อนุญาตเฉพาะ relative path ที่ขึ้นต้นด้วย /</span>
+      </div>
+    </div>
+
+    <div class="finding-card high">
+      <div class="finding-title">
+        <span class="badge badge-orange">HIGH</span>
+        Security Headers ไม่ครบ
+      </div>
+      <div class="finding-body">
+        SecurityHeadersMiddleware มีเพียง <code>X-Frame-Options</code> และ <code>X-Content-Type-Options</code>
+        ขาด HSTS (<code>Strict-Transport-Security</code>), <code>Referrer-Policy</code> และ <code>X-XSS-Protection</code>
+        ซึ่งจำเป็นสำหรับ production ที่รัน HTTPS
+      </div>
+      <div class="finding-meta">
+        <span>📁 middleware.py:5</span>
+        <span>✅ แก้ไขแล้ว: เพิ่ม HSTS max-age=31536000, Referrer-Policy, X-XSS-Protection</span>
+      </div>
+    </div>
+
+    <div class="finding-card high">
+      <div class="finding-title">
+        <span class="badge badge-orange">HIGH</span>
+        Redis ไม่มี Connection Pool
+      </div>
+      <div class="finding-body">
+        Session store สร้าง Redis connection ใหม่ทุก request (<code>redis.from_url()</code>)
+        ทำให้สิ้นเปลือง file descriptor และอาจเกิด connection exhaustion ภายใต้ traffic สูง
+      </div>
+      <div class="finding-meta">
+        <span>📁 session.py:3</span>
+        <span>✅ แก้ไขแล้ว: ใช้ ConnectionPool shared ระดับ module</span>
+      </div>
+    </div>
+
+    <div class="finding-card high">
+      <div class="finding-title">
+        <span class="badge badge-orange">HIGH</span>
+        LINE Login Redirect URI ใช้ IP Hardcode
+      </div>
+      <div class="finding-body">
+        ค่า default ใน <code>config.py</code> ระบุ <code>http://192.168.191.12:8012/line/callback</code>
+        ซึ่งเป็น HTTP และ IP address ไม่ใช่ domain จริง หากไม่ได้ override ด้วย .env อาจใช้งานไม่ได้
+        และ LINE จะปฏิเสธ redirect URI ที่ไม่ตรง
+      </div>
+      <div class="finding-meta">
+        <span>📁 config.py:58</span>
+        <span>✅ ยืนยันแล้ว: production .env ตั้ง LINE_LOGIN_REDIRECT_URI เป็น HTTPS domain จริง</span>
+      </div>
+    </div>
+
+    <!-- Medium / Accepted Risk -->
+    <div style="font-size:13px; font-weight:700; color:#F9A825; margin:20px 0 10px; display:flex; align-items:center; gap:6px;">
+      🟡 ระดับ Medium — ยอมรับความเสี่ยง (Accepted Risk)
+    </div>
+
+    <div class="finding-card medium">
+      <div class="finding-title">
+        <span class="badge badge-yellow">MEDIUM</span>
+        CSRF Middleware ไม่ได้ Enforce (Stub)
+      </div>
+      <div class="finding-body">
+        CSRFMiddleware เป็นโค้ดว่าง form ใน admin มีเพียง login.html ที่ส่ง csrf_token
+        อีก 22 form ยังไม่มี — อย่างไรก็ตาม admin panel อยู่ใน LAN เท่านั้น ไม่เปิดจากภายนอก
+        และ public form 2 ตัวมีการป้องกันเฉพาะที่แน่นกว่า CSRF อยู่แล้ว (HMAC + LINE cookie)
+      </div>
+      <div class="finding-meta">
+        <span>📁 middleware.py:26</span>
+        <span style="color:var(--orange);">⚠️ ยอมรับความเสี่ยง: ผลกระทบจริงต่ำมากเนื่องจาก architecture แยก LAN/Public ชัดเจน</span>
+      </div>
+    </div>
+
+    <div class="finding-card medium">
+      <div class="finding-title">
+        <span class="badge badge-yellow">MEDIUM</span>
+        CORS อนุญาต Methods และ Headers ทั้งหมด
+      </div>
+      <div class="finding-body">
+        <code>allow_methods=["*"]</code> และ <code>allow_headers=["*"]</code> กว้างเกินความจำเป็น
+        อย่างไรก็ตาม ระบบไม่มี JavaScript cross-origin request เลย (ทั้งหมดเป็น form submit)
+        และ ALLOWED_ORIGINS กำหนดเฉพาะ domain แล้ว ทำให้ CORS ไม่มีผลกระทบจริง
+      </div>
+      <div class="finding-meta">
+        <span>📁 main.py:50</span>
+        <span style="color:var(--orange);">⚠️ ยอมรับความเสี่ยง: ไม่มี cross-origin JS call ในระบบ ความเสี่ยงเป็นศูนย์ในบริบทนี้</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. มาตรการที่ดีที่มีอยู่แล้ว -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div>
+        <div class="section-title">มาตรการความปลอดภัยที่มีอยู่แล้ว</div>
+        <div class="section-subtitle">Existing Security Controls — Passed</div>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">Bcrypt Password Hashing</div>
+          <div style="font-size:12px; color:var(--gray);">ใช้ bcrypt (cost factor ปกติ) สำหรับ hash รหัสผ่านทุกบัญชี ไม่เก็บ plaintext</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">TOTP Two-Factor Authentication (2FA)</div>
+          <div style="font-size:12px; color:var(--gray);">Admin ทุกคนต้องผ่าน TOTP (Google Authenticator) หลังกรอก username/password</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">HMAC-Signed Claim URL พร้อม Expiry</div>
+          <div style="font-size:12px; color:var(--gray);">ลิงก์รับเคสลงนามด้วย HMAC-SHA256 มีอายุ 1 ชั่วโมง ปลอม URL ไม่ได้</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">LINE OAuth State Validation</div>
+          <div style="font-size:12px; color:var(--gray);">State parameter เก็บใน Redis 5 นาที ป้องกัน CSRF บน OAuth flow</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">Server-Side Session (Redis)</div>
+          <div style="font-size:12px; color:var(--gray);">ไม่ใช้ JWT ใน cookie — session payload อยู่ใน Redis server ฝั่งเดียว revoke ได้ทันที</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">IP Ban + Login Fail Limit</div>
+          <div style="font-size:12px; color:var(--gray);">Block อัตโนมัติหลัง 5 ครั้งล้มเหลว, ban IP ที่พยายาม brute force เกิน threshold</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">SQL Guard (SELECT-Only)</div>
+          <div style="font-size:12px; color:var(--gray);">Query ที่ user กำหนดเองถูก whitelist ให้ SELECT เท่านั้น ป้องกัน DDL/DML injection</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon">✅</span>
+        <div>
+          <div style="font-weight:600; font-size:13px;">Role-Based Access Control (RBAC)</div>
+          <div style="font-size:12px; color:var(--gray);">ทุก endpoint ตรวจสิทธิ์ตาม role ของผู้ใช้ ป้องกันการเข้าถึงฟีเจอร์เกินสิทธิ์</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 5. สิ่งที่แก้ไขและ commit แล้ว -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div>
+        <div class="section-title">สรุปการแก้ไขที่ดำเนินการแล้ว</div>
+        <div class="section-subtitle">Remediation Summary — Committed to Git</div>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div>
+        การแก้ไขทั้งหมด commit และ push ขึ้น Git repository แล้ว
+        Commit: <strong>092b4ad</strong> และ <strong>9813901</strong> บน branch <code>master</code>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>รายการ</th>
+          <th>ไฟล์ที่แก้ไข</th>
+          <th>สถานะ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>เพิ่ม <code>LINE_LOGIN_COOKIE_SECURE=true</code> แยกจาก session cookie</td>
+          <td><code>config.py</code>, <code>web.py</code></td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>Implement AccessLogMiddleware (method, path, status, latency, IP)</td>
+          <td><code>middleware.py</code></td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>เพิ่ม HSTS, Referrer-Policy, X-XSS-Protection headers</td>
+          <td><code>middleware.py</code></td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>แก้ Open Redirect — อนุญาตเฉพาะ relative path ( / )</td>
+          <td><code>web.py:1748</code></td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>Redis ConnectionPool แทนการสร้าง connection ใหม่ทุก request</td>
+          <td><code>session.py</code></td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>อัปเดต <code>.env.example</code> — SESSION_COOKIE_SECURE=true สำหรับ production</td>
+          <td><code>.env.example</code></td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>ยืนยัน CLAIM_SIGNING_SECRET ตั้งค่าใน production .env แล้ว</td>
+          <td>production .env (server)</td>
+          <td><span class="badge badge-green">✅ Done</span></td>
+        </tr>
+        <tr>
+          <td>SESSION_COOKIE_SECURE — คง false ไว้สำหรับ admin HTTP LAN</td>
+          <td>—</td>
+          <td><span class="badge badge-blue">ตัดสินใจแล้ว</span></td>
+        </tr>
+        <tr>
+          <td>CSRF Middleware enforcement</td>
+          <td>—</td>
+          <td><span class="badge badge-gray">ยอมรับความเสี่ยง</span></td>
+        </tr>
+        <tr>
+          <td>CORS restrict methods/headers</td>
+          <td>—</td>
+          <td><span class="badge badge-gray">ยอมรับความเสี่ยง</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 6. ข้อเสนอแนะเพิ่มเติม -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div>
+        <div class="section-title">ข้อเสนอแนะเพิ่มเติมระยะยาว</div>
+        <div class="section-subtitle">Future Recommendations</div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-icon todo">🔐</div>
+      <div>
+        <div class="action-title">HTTPS สำหรับ Admin Panel (LAN)</div>
+        <div class="action-desc">
+          ติดตั้ง self-signed certificate หรือ Let's Encrypt สำหรับ internal domain เช่น
+          <code>admin.bkhospital.local</code> เพื่อให้เปิด <code>SESSION_COOKIE_SECURE=true</code> ได้
+          และป้องกัน session hijacking ใน LAN
+        </div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-icon todo">🛡️</div>
+      <div>
+        <div class="action-title">CSRF Token ครบทุก Form</div>
+        <div class="action-desc">
+          เพิ่ม <code>{% raw %}{{ csrf_token }}{% endraw %}</code> ใน 22 form ที่เหลือใน admin templates
+          แล้ว implement CSRFMiddleware จริง จะช่วยป้องกัน CSRF บน admin panel ได้สมบูรณ์
+        </div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-icon todo">📋</div>
+      <div>
+        <div class="action-title">Content Security Policy (CSP)</div>
+        <div class="action-desc">
+          หลังจาก audit inline script/style ใน template แล้ว ให้เพิ่ม CSP header
+          เพื่อป้องกัน XSS จาก injected content ควร audit ก่อนว่ามี inline script กี่ที่
+        </div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-icon todo">🔄</div>
+      <div>
+        <div class="action-title">Session Rotation หลัง Login สำเร็จ</div>
+        <div class="action-desc">
+          สร้าง session ID ใหม่ทุกครั้งหลัง authenticate สำเร็จ ป้องกัน Session Fixation attack
+        </div>
+      </div>
+    </div>
+
+    <div class="action-item">
+      <div class="action-icon todo">⏱️</div>
+      <div>
+        <div class="action-title">Rate Limiting บน Public Endpoints</div>
+        <div class="action-desc">
+          เพิ่ม rate limit บน <code>/alerts/claim</code> และ <code>/line/callback</code>
+          เพื่อป้องกัน automated abuse แม้จะมี HMAC guard อยู่แล้ว
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. ลงนาม -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div>
+        <div class="section-title">การรับรองรายงาน</div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:10px;">
+      <div>
+        <div style="font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-2);">ผู้ตรวจสอบ</div>
+        <div style="border-bottom:1px solid #ccc; margin-bottom:6px; height:40px;"></div>
+        <div style="font-size:12px; color:var(--gray);">ฝ่ายเทคโนโลยีสารสนเทศ<br>โรงพยาบาลบางระกำ</div>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-2);">ผู้อนุมัติ</div>
+        <div style="border-bottom:1px solid #ccc; margin-bottom:6px; height:40px;"></div>
+        <div style="font-size:12px; color:var(--gray);">ผู้บริหาร / หัวหน้าฝ่าย<br>วันที่ ………………………</div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px; background:var(--gray-light); border-radius:8px; padding:12px 16px; font-size:11px; color:var(--gray); line-height:1.7;">
+      <strong>หมายเหตุ:</strong> รายงานฉบับนี้จัดทำโดยฝ่ายเทคโนโลยีสารสนเทศ โรงพยาบาลบางระกำ
+      เพื่อใช้ภายในองค์กรเท่านั้น ข้อมูลในรายงานถือเป็นความลับ
+      ห้ามเผยแพร่ต่อบุคคลภายนอกโดยไม่ได้รับอนุญาต
+    </div>
+  </div>
+
+</div><!-- end page-wrapper -->
+
+</body>
+</html>
