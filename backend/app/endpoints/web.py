@@ -472,9 +472,8 @@ async def provider_callback(request:Request, code:str|None=None, error:str|None=
         write_log(db, None, ip, 'login.provider', 'failed', str(exc))
         return render_login(request, f'Provider callback error: {exc}')
 
-@router.get('/auth/sso')
-def sso_verify(request:Request, sso_token:str|None=None, db:Session=Depends(get_db)):
-    """รับ JWT จาก providerlogin แล้วสร้าง session"""
+def _sso_verify_token(request: Request, sso_token: str | None, db):
+    """shared logic: ตรวจสอบ SSO token แล้วสร้าง session — ใช้ร่วมกันระหว่าง GET และ POST"""
     ip = client_ip(request)
     if not settings.sso_enabled:
         write_log(db, None, ip, 'login.sso', 'failed', 'SSO disabled')
@@ -507,6 +506,16 @@ def sso_verify(request:Request, sso_token:str|None=None, db:Session=Depends(get_
     except Exception as exc:
         write_log(db, None, ip, 'login.sso', 'failed', str(exc))
         return render_login(request, 'SSO error เกิดข้อผิดพลาด กรุณาลองใหม่')
+
+@router.post('/auth/sso')
+def sso_verify_post(request: Request, sso_token: str = Form(''), db: Session = Depends(get_db)):
+    """รับ SSO token จาก providerlogin ผ่าน POST form body (วิธีหลัก — token ไม่ปรากฏใน URL)"""
+    return _sso_verify_token(request, sso_token or None, db)
+
+@router.get('/auth/sso')
+def sso_verify_get(request: Request, sso_token: str | None = None, db: Session = Depends(get_db)):
+    """รับ SSO token ผ่าน GET query string (legacy fallback — deprecated)"""
+    return _sso_verify_token(request, sso_token, db)
 
 @router.post('/api/v1/notify/status/callback')
 async def notify_status_callback(request:Request, db:Session=Depends(get_db)):
