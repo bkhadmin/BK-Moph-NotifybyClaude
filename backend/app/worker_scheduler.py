@@ -31,7 +31,8 @@ def _job_config(job):
     except Exception:
         return {}
 
-def _build_messages(db, job):
+def _fetch_and_enrich(db, job):
+    """Query, enrich, filter claimed rows. Returns (template, alert_cfg, filtered_rows)."""
     q = get_query(db, job.approved_query_id) if job.approved_query_id else None
     t = get_template(db, job.message_template_id) if job.message_template_id else None
     if not q or not t:
@@ -55,7 +56,7 @@ def _build_messages(db, job):
     except Exception:
         pass
 
-    # enrich alert rows with case_key / claim_url / claim status, then skip already-claimed cases
+    # enrich alert rows with case_key / claim_url / claim status
     try:
         base_url = os.getenv("APP_BASE_URL") or os.getenv("PUBLIC_BASE_URL") or "http://192.168.191.12:8012"
         enriched_rows = enrich_alert_rows(db, rows, base_url, alert_cfg=alert_cfg, notify_room_id=getattr(job, "notify_room_id", None))
@@ -73,19 +74,28 @@ def _build_messages(db, job):
         item["case_status_text"] = "รอรับเคส"
         filtered_rows.append(item)
 
-    if not filtered_rows:
-        return [], []
+    return t, alert_cfg, filtered_rows
 
-    dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, filtered_rows, alert_cfg=alert_cfg)
+
+def _messages_from_rows(t, alert_cfg, rows):
+    """Build LINE messages from a given (already-enriched) list of rows."""
+    if not rows:
+        return []
+    dynamic_payload = build_dynamic_template_payload(t.template_type, t.content, t.alt_text, rows, alert_cfg=alert_cfg)
     if dynamic_payload is not None:
         messages = dynamic_payload
     elif t.template_type == "flex":
-        messages = build_flex_payload_from_template_rows(t.content, t.alt_text, filtered_rows)
+        messages = build_flex_payload_from_template_rows(t.content, t.alt_text, rows)
     else:
-        messages = [build_message_payload(t.template_type, t.content, t.alt_text, row) for row in filtered_rows[:10]]
+        messages = [build_message_payload(t.template_type, t.content, t.alt_text, row) for row in rows[:10]]
+    return sanitize_messages(messages)
 
-    messages = sanitize_messages(messages)
-    return filtered_rows, messages
+
+def _build_messages(db, job):
+    t, alert_cfg, filtered_rows = _fetch_and_enrich(db, job)
+    if not filtered_rows:
+        return [], []
+    return filtered_rows, _messages_from_rows(t, alert_cfg, filtered_rows)
 
 def _safe_create_log(db, **kwargs):
     try:
@@ -158,15 +168,24 @@ def execute_job(db, job):
     rows = []
     messages = []
     try:
-        rows, messages = _build_messages(db, job)
+        use_alertroom = getattr(job, 'use_alertroom', 'N') == 'Y'
 
-        if not rows or not messages:
+        # ── fetch + enrich rows (query DB once) ──────────────────
+        if use_alertroom:
+            t, alert_cfg, rows = _fetch_and_enrich(db, job)
+            no_data = not rows
+        else:
+            rows, messages = _build_messages(db, job)
+            no_data = not rows or not messages
+
+        # ── no data → log + advance schedule ─────────────────────
+        if no_data:
             _safe_create_log(
                 db,
                 schedule_job_id=job.id,
                 run_at=now,
                 status="no_data",
-                rows_returned=len(rows) if rows else 0,
+                rows_returned=len(rows),
                 sent_count=0,
                 detail_json=json.dumps({
                     "message": "no rows returned; skip send",
@@ -185,56 +204,84 @@ def execute_job(db, job):
                 payload_json=json.dumps(cfg, ensure_ascii=False),
             )
             print(f"[scheduler] no_data job_id={job.id} next_run_at={next_run} room_id={getattr(job, 'notify_room_id', None)}")
-            return {"status": "no_data", "rows": len(rows) if rows else 0, "sent": 0}
+            return {"status": "no_data", "rows": len(rows), "sent": 0}
 
-        use_alertroom = getattr(job, 'use_alertroom', 'N') == 'Y'
+        # ── send ──────────────────────────────────────────────────
+        send_log_id = None
+        result = {}
+        updated_cases = 0
+
         if use_alertroom:
-            # รวม alertroom codes จากทุก row แล้วส่งไปแต่ละห้อง
-            codes = set()
+            from app.repositories.notify_rooms import get_by_room_codes
+
+            # group rows by alertroom code — 1 row อาจมีหลาย code (comma-separated)
+            room_rows: dict = {}   # room_code → [row, ...]
+            fallback_rows = []
             for row in rows:
                 av = str(row.get('alertroom') or '').strip()
-                for c in av.split(','):
-                    if c.strip():
-                        codes.add(c.strip())
-            from app.repositories.notify_rooms import get_by_room_codes
-            target_rooms = get_by_room_codes(db, list(codes))
-            room_code_to_id = {r.room_code: r.id for r in target_rooms}
-            send_log_id = None
-            result = {}
-            if not target_rooms:
-                # ไม่พบห้องที่ตรงกับ alertroom → fallback ไป default room (.env)
+                codes_for_row = [c.strip() for c in av.split(',') if c.strip()]
+                if codes_for_row:
+                    for code in codes_for_row:
+                        room_rows.setdefault(code, []).append(row)
+                else:
+                    fallback_rows.append(row)
+
+            all_codes = list(room_rows.keys())
+            target_rooms = get_by_room_codes(db, all_codes)
+            room_code_to_obj = {r.room_code: r for r in target_rooms}
+
+            # build + send เฉพาะ rows ของแต่ละห้อง
+            for code, room_specific_rows in room_rows.items():
+                room_msgs = _messages_from_rows(t, alert_cfg, room_specific_rows)
+                if not room_msgs:
+                    continue
+                messages.extend(room_msgs)
+
+                room_obj = room_code_to_obj.get(code)
+                r_id = room_obj.id if room_obj else None
                 r, lid = asyncio.run(send_with_log(
-                    db, "scheduler", messages,
-                    f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, alertroom=fallback",
-                    notify_room_id=None,
+                    db, "scheduler", room_msgs,
+                    f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, alertroom={code}",
+                    notify_room_id=r_id,
                 ))
                 result = dict(r or {})
                 send_log_id = lid
-            for room in target_rooms:
-                r, lid = asyncio.run(send_with_log(
-                    db, "scheduler", messages,
-                    f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, alertroom={room.room_code}",
-                    notify_room_id=room.id,
-                ))
-                result = dict(r or {})
-                send_log_id = lid
-            result["send_log_id"] = send_log_id
-            updated_cases = 0
-            for row in rows or []:
-                try:
-                    case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
-                    lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
-                    if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
-                        updated_cases += 1
-                    row_code = str(row.get('alertroom') or '').strip().split(',')[0].strip()
-                    row_room_id = room_code_to_id.get(row_code)
-                    if row_room_id and case_key:
-                        db.execute(
-                            text("UPDATE alert_cases SET notify_room_id=:rid WHERE case_key=:ck AND notify_room_id IS NULL"),
-                            {"rid": row_room_id, "ck": case_key}
-                        )
-                except Exception:
-                    pass
+
+                for row in room_specific_rows:
+                    try:
+                        case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
+                        lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
+                        if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
+                            updated_cases += 1
+                        if r_id and case_key:
+                            db.execute(
+                                text("UPDATE alert_cases SET notify_room_id=:rid WHERE case_key=:ck AND notify_room_id IS NULL"),
+                                {"rid": r_id, "ck": case_key}
+                            )
+                    except Exception:
+                        pass
+
+            # rows ที่ไม่มี alertroom field → ส่ง default room
+            if fallback_rows:
+                fb_msgs = _messages_from_rows(t, alert_cfg, fallback_rows)
+                if fb_msgs:
+                    messages.extend(fb_msgs)
+                    r, lid = asyncio.run(send_with_log(
+                        db, "scheduler", fb_msgs,
+                        f"schedule_job_id={job.id}, approved_query_id={job.approved_query_id}, template_id={job.message_template_id}, alertroom=fallback",
+                        notify_room_id=None,
+                    ))
+                    result = dict(r or {})
+                    send_log_id = lid
+                    for row in fallback_rows:
+                        try:
+                            case_key = row.get("case_key") if isinstance(row, dict) else getattr(row, "case_key", None)
+                            lab_order_number = row.get("lab_order_number") if isinstance(row, dict) else getattr(row, "lab_order_number", None)
+                            if mark_alert_case_sent(db, case_key=case_key, lab_order_number=lab_order_number):
+                                updated_cases += 1
+                        except Exception:
+                            pass
+
         else:
             result, send_log_id = asyncio.run(
                 send_with_log(
@@ -246,8 +293,6 @@ def execute_job(db, job):
                 )
             )
             result = dict(result or {})
-            result["send_log_id"] = send_log_id
-            updated_cases = 0
             job_notify_room_id = getattr(job, "notify_room_id", None)
             for row in rows or []:
                 try:
@@ -262,6 +307,8 @@ def execute_job(db, job):
                         )
                 except Exception:
                     pass
+
+        result["send_log_id"] = send_log_id
         db.commit()
         db.expire_all()
         result["updated_cases"] = updated_cases
